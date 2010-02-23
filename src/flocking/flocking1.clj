@@ -3,12 +3,10 @@
         [rosado.processing.applet])
   (:import [processing.core PApplet]))
 
-(defn mult [[x y] s]
-  [(* (float x) (float s)) (* (float y) (float s))])
- 
-(defn div [v s]
-  (mult v (/ 1.0 (float s))))
- 
+(def *rnd* (new java.util.Random))
+(def *width* 640)
+(def *height* 480)
+
 (defn add [[x1 y1] [x2 y2]]
   [(+ (float x1) (float x2))
    (+ (float y1) (float y2))])
@@ -17,8 +15,11 @@
   [(- (float x1) (float x2))
    (- (float y1) (float y2))])
 
-(defn limit [v n]
-  (mult (unit v) n))
+(defn mult [[x y] s]
+  [(* (float x) (float s)) (* (float y) (float s))])
+ 
+(defn div [v s]
+  (mult v (/ 1.0 (float s))))
 
 (defn unit [[x y]]
   (let [x (float x)
@@ -26,10 +27,15 @@
         d (PApplet/dist 0.0 0.0 x y)]
     [(/ x d) (/ y d)]))
 
+(defn limit [v n]
+  (mult (unit v) n))
+
 (def aflock (atom []))
+
 (defn make-boid [loc ms mf]
   {:loc loc
-   :vel [(.random *applet* -1.0 1.0) (.random *applet* -1.0 1.0)]
+   :vel [(+ (* (.nextFloat *rnd*) 2) -1)
+         (+ (* (.nextFloat *rnd*) 2) -1)]
    :acc [0 0]
    :r  2.0
    :max-speed ms
@@ -45,7 +51,7 @@
     true n)))
 
 (defn borders [{[x y] :loc, r :r, :as boid}]
-  (assoc boid :loc [(bound x r 640) (bound y r 480)]))
+  (assoc boid :loc [(bound x r *width*) (bound y r *height*)]))
  
 (defn render [{[dx dy] :vel, [x y] :loc, r :r, :as boid}]
   (let [dx (float dx)
@@ -66,20 +72,24 @@
     boid))
  
 (defn make-flock []
-  (reset! aflock (take 150 (repeatedly #(make-boid [320 240] 2.0 0.05)))))
+  (reset! aflock
+          (take 150
+                (repeatedly #(make-boid [(/ *width* 2.0) (/ *height* 2.0)] 2.0 0.05)))))
 
 (declare flock-run)
 
 (defn setup []
+  (println "setup")
+  (framerate 60)
   (make-flock))
 
 (defn draw []
+  (println "draw")
   (background-int 50)
-  (flock-run)
-  (framerate 60))
+  (flock-run))
  
 (defapplet flocking1 :title "Flocking 1"
-  :setup setup :draw draw :size [640 480])
+  :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
   (let [[desiredx desiredy :as desired]  (sub target loc)
@@ -190,9 +200,9 @@
   (println
    (time
     (do
-      (dosync
-       (commute aflock flock-run-all))
+      (swap! aflock flock-run-all)
       (doseq [boid @aflock]
         (render boid))))))
 
-(run flocking1)
+(comment
+  (run flocking1))
