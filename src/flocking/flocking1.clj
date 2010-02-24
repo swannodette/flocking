@@ -6,6 +6,11 @@
 (def *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 480)
+(def *epsilon* (Math/pow 10 -6))
+
+(defn equal [[x1 y1] [x2 y2]]
+  (and (< (- x1 x2) *epsilon*)
+       (< (- y1 y2) *epsilon*)))
 
 (defn add [[x1 y1] [x2 y2]]
   [(+ (float x1) (float x2))
@@ -81,7 +86,7 @@
 (defn setup []
   (println "setup")
   (framerate 60)
-  (make-flock))
+  (make-flock)0)
 
 (defn draw []
   (println "draw")
@@ -122,7 +127,7 @@
           dmap))
  
 (defn separation-map [loc dm]
-  (map (fn [[v1 v2]] (div (unit (sub loc (second v2))) v1)) dm))
+  (map (fn [[v1 v2]] (div (unit (sub loc v2)) v1)) dm))
  
 (defn separate [{loc :loc, :as boid} boids]
   (let [dsep      25.0
