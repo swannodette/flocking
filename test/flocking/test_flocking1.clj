@@ -13,3 +13,6 @@
 
 (deftest test-div
   (is (equal (div [6.66 333.3] 3) [2.22 111.1])))
+
+(deftest test-unit
+  (is (equal (unit [5.0 4.0]))))
