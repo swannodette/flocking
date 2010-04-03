@@ -109,7 +109,7 @@
 (defn separation-map [{loc :loc :as boid} boids]
   (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
  
-(defn separate [boid boids]
+(defn separation [boid boids]
   (let [dsep      25.0
         filtered  (distance-filter boids 0.0 dsep)
         final     (separation-map boid filtered)
@@ -121,7 +121,7 @@
       (vm/div sum acount)
       sum)))
  
-(defn align [{mf :max-force, loc :loc, :as boid} boids]
+(defn alignment [{mf :max-force, loc :loc, :as boid} boids]
   (let [nhood     50.0
         filtered  (distance-filter boids 0 nhood)
         vels      (map :vel filtered)
@@ -146,8 +146,8 @@
  
 (defn flock [{acc :acc, :as boid} boids]
   (let [mboids (distance-map boid boids)
-        sep    (-> (separate boid mboids) (vm/mul 2.0))
-        ali    (-> (align boid mboids) (vm/mul 1.0))
+        sep    (-> (separation boid mboids) (vm/mul 2.0))
+        ali    (-> (alignment boid mboids) (vm/mul 1.0))
         coh    (-> (cohesion boid mboids) (vm/mul 1.0))]
     (assoc boid :acc (-> acc (vm/add sep) (vm/add ali) (vm/add coh)))))
  
