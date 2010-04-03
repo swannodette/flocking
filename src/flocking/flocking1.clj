@@ -98,7 +98,7 @@
 
 (defn distance-map
   [{loc :loc, :as boid} boids]
-  (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc)) boids)))
+  (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc))) boids))
   
 (defn distance-filter
   [boids l u]
@@ -106,6 +106,11 @@
         u (float u)]
    (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
  
+(defn vec2-sum
+ ([] nil) 
+ ([a] a)
+ ([a b] (vm/add a b)))
+
 (defn separation-map [{loc :loc :as boid} boids]
   (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
  
@@ -115,19 +120,19 @@
         final     (separation-map boid filtered)
         acount    (count final)
         sum       (or (and final 
-                           (reduce vm/add final))
+                           (reduce vec2-sum final))
                       vec2-zero)]
     (if (> acount (int 0))
       (vm/div sum acount)
       sum)))
- 
+
 (defn alignment [{mf :max-force :as boid} boids]
   (let [nhood     50.0
         filtered  (distance-filter boids 0 nhood)
         vels      (map :vel filtered)
         acount    (count vels)
         sum       (or (and vels 
-                           (reduce vm/add vels))
+                           (reduce vec2-sum vels))
                       vec2-zero)]
     (if (> acount (int 0))
       (limit (vm/div sum acount) mf)
@@ -138,7 +143,7 @@
         filtered   (map :dist (distance-filter boids 0 nhood))
         acount     (count filtered)
         sum        (or (and (> acount (int 0))
-                            (reduce vm/add filtered))
+                            (reduce vec2-sum filtered))
                        vec2-zero)]
     (if (> acount (int 0))
       (steer boid (vm/div sum acount) nil)
@@ -164,7 +169,7 @@
   (assoc boid :acc (steer target true)))
  
 (defn boid-run [boid boids]
-  (borders (update (flock boid boids))))
+  (-> (flock boid boids) update borders))
  
 (defn flock-run-all [flock]
   (map #(boid-run % flock) flock))
@@ -178,7 +183,9 @@
         (render boid))))))
 
 (comment
-  (run flocking1))
+  (applet/run flocking1)
+  (applet/stop flocking1)
+  )
 
 (comment
   ; 3ms normal
