@@ -121,7 +121,7 @@
       (vm/div sum acount)
       sum)))
  
-(defn alignment [{mf :max-force, loc :loc, :as boid} boids]
+(defn alignment [{mf :max-force :as boid} boids]
   (let [nhood     50.0
         filtered  (distance-filter boids 0 nhood)
         vels      (map :vel filtered)
@@ -133,7 +133,7 @@
       (limit (vm/div sum acount) mf)
       sum)))
  
-(defn cohesion [{loc :loc, :as boid} boids]
+(defn cohesion [boid boids]
   (let [nhood      50.0
         filtered   (map :dist (distance-filter boids 0 nhood))
         acount     (count filtered)
