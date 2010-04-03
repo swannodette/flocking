@@ -11,6 +11,11 @@
 (def *epsilon* (Math/pow 10 -6))
 (def aflock (atom []))
 
+(defn vec2-sum
+ ([] nil) 
+ ([a] a)
+ ([a b] (vm/add a b)))
+
 (defn limit [v n]
   (vm/mul (vm/unit v) n))
 
@@ -105,11 +110,6 @@
   (let [l (float l)
         u (float u)]
    (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
- 
-(defn vec2-sum
- ([] nil) 
- ([a] a)
- ([a b] (vm/add a b)))
 
 (defn separation-map [{loc :loc :as boid} boids]
   (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
@@ -161,13 +161,7 @@
     :vel (limit (vm/add vel acc) ms)
     :loc (vm/add loc vel)
     :acc (vm/mul acc 0.0)))
- 
-(defn seek [{acc :acc, :as boid} target]
-  (assoc boid :acc (steer target nil)))
- 
-(defn arrive [{acc :acc, :as boid} target]
-  (assoc boid :acc (steer target true)))
- 
+
 (defn boid-run [boid boids]
   (-> (flock boid boids) update borders))
  
