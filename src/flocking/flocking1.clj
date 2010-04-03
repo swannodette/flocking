@@ -15,11 +15,11 @@
   (vm/mul (vm/unit v) n))
 
 (defn make-boid [loc ms mf]
-  {:loc loc
-   :vel (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
-              (+ (* (.nextFloat *rnd*) 2) -1))
-   :acc (vec2 0 0)
-   :r  2.0
+  {:loc       loc
+   :vel       (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
+                    (+ (* (.nextFloat *rnd*) 2) -1))
+   :acc       (vec2 0 0)
+   :r         2.0
    :max-speed ms
    :max-force mf})
  
@@ -98,7 +98,7 @@
 
 (defn distance-map
   [{loc :loc, :as boid} boids]
-  (map #(assoc boid :dist (vm/dist (:loc %) loc)) boids))
+  (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc)) boids)))
   
 (defn distance-filter
   [boids l u]
@@ -106,30 +106,20 @@
         u (float u)]
    (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
  
-(defn separation-map [loc dm]
-  (map (fn [[v1 v2]] (-> loc (sub v2) unit (vm/div v1))) dm))
+(defn separation-map [{loc :loc :as boid} boids]
+  (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
  
-(defn separate [{loc :loc, :as boid} boids]
+(defn separate [boid boids]
   (let [dsep      25.0
-        filtered  (map :loc (distance-filter boids 0.0 dsep))
-        final     (separation-map loc filtered)
+        filtered  (distance-filter boids 0.0 dsep)
+        final     (separation-map boid filtered)
         acount    (count final)
         sum       (or (and final 
-                           (reduce add final))
+                           (reduce vm/add final))
                       vec2-zero)]
     (if (> acount (int 0))
       (vm/div sum acount)
       sum)))
- 
-(defn dist-vel-loc-map [{loc :loc, :as boid} boids]
-  (let [lx (float (:x loc))
-        ly (float (:y loc))]
-    (map (fn [{oloc :loc vel :vel :as b}]
-          (let [x (float (:x oloc))
-                y (float (:y oloc))
-                vel (float (:vel b))]
-            (vector (PApplet/dist x y lx ly) vel)))
-        boids)))
  
 (defn align [{mf :max-force, loc :loc, :as boid} boids]
   (let [nhood     50.0
@@ -137,7 +127,7 @@
         vels      (map :vel filtered)
         acount    (count vels)
         sum       (or (and vels 
-                           (reduce add vels))
+                           (reduce vm/add vels))
                       vec2-zero)]
     (if (> acount (int 0))
       (limit (vm/div sum acount) mf)
@@ -148,7 +138,7 @@
         filtered   (map :dist (distance-filter boids 0 nhood))
         acount     (count filtered)
         sum        (or (and (> acount (int 0))
-                            (reduce add filtered))
+                            (reduce vm/add filtered))
                        vec2-zero)]
     (if (> acount (int 0))
       (steer boid (vm/div sum acount) nil)
@@ -156,16 +146,16 @@
  
 (defn flock [{acc :acc, :as boid} boids]
   (let [mboids (distance-map boid boids)
-        sep    (-> (separate boid mboids) (mult 2.0))
-        ali    (-> (align boid mboids) (mult 1.0))
-        coh    (-> (cohesion boid mboids) (mult 1.0))]
-    (assoc boid :acc (map + acc sep ali coh))))
+        sep    (-> (separate boid mboids) (vm/mul 2.0))
+        ali    (-> (align boid mboids) (vm/mul 1.0))
+        coh    (-> (cohesion boid mboids) (vm/mul 1.0))]
+    (assoc boid :acc (-> acc (vm/add sep) (vm/add ali) (vm/add coh)))))
  
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
   (assoc boid 
-    :vel (limit (add vel acc) ms)
-    :loc (add loc vel)
-    :acc (mult acc 0.0)))
+    :vel (limit (vm/add vel acc) ms)
+    :loc (vm/add loc vel)
+    :acc (vm/mul acc 0.0)))
  
 (defn seek [{acc :acc, :as boid} target]
   (assoc boid :acc (steer target nil)))
