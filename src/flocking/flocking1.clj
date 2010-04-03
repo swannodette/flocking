@@ -9,11 +9,10 @@
 (def *width* 640)
 (def *height* 480)
 (def *epsilon* (Math/pow 10 -6))
+(def aflock (atom []))
 
 (defn limit [v n]
   (vm/mul (vm/unit v) n))
-
-(def aflock (atom []))
 
 (defn make-boid [loc ms mf]
   {:loc loc
@@ -41,37 +40,40 @@
         dy (float dy)
         r  (float r)
         theta (+ (PApplet/atan2 dy dx) (/ Math/PI 2.0))]
-    (fill-float 200 100)
-    (stroke-int 255)
-    (push-matrix)
-    (translate x y)
-    (rotate theta)
-    (begin-shape TRIANGLES)
-    (vertex 0 (* (- r) 2.0))
-    (vertex (- r) (* r 2.0))
-    (vertex r (* r 2.0))
-    (end-shape)
-    (pop-matrix)
+    (p/fill-float 200 100)
+    (p/stroke-int 255)
+    (p/push-matrix)
+    (p/translate x y)
+    (p/rotate theta)
+    (p/begin-shape TRIANGLES)
+    (p/vertex 0 (* (- r) 2.0))
+    (p/vertex (- r) (* r 2.0))
+    (p/vertex r (* r 2.0))
+    (p/end-shape)
+    (p/pop-matrix)
     boid))
+
+(defn boids [x y]
+  (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
  
 (defn make-flock []
-  (reset! aflock
-          (take 150
-                (repeatedly #(make-boid (vec2 (/ *width* 2.0) (/ *height* 2.0)) 2.0 0.05)))))
+  (let [x (/ *width* 2.0)
+        y (/ *height* 2.0)]
+   (reset! aflock (into [] (take 150 (boids x y))))))
 
 (declare flock-run)
 
 (defn setup []
   (println "setup")
-  (framerate 60)
+  (p/framerate 60)
   (make-flock))
 
 (defn draw []
   (println "draw")
-  (background-int 50)
+  (p/background-int 50)
   (flock-run))
  
-(defapplet flocking1 :title "Flocking 1"
+(applet/defapplet flocking1 :title "Flocking 1"
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
@@ -93,39 +95,30 @@
                              (vm/sub vel)
                              (limit mf)))
      true vec2-zero)))
- 
-(defn loc-map [boids]
-  (map #(:loc %) boids))
 
-(defn distance-map [{loc :loc, :as boid} boids]
-  (map #(assoc boid :dist (vm/dist % loc)) (loc-map boids)))
-
-(comment
-  )
- 
-(defn distance-map-filter [dmap l u]
-  (filter (fn [[x]]
-            (let [x (float x)
-                  l (float l)
-                  u (float u)]
-             (and (> x l) 
-                  (< x u))))
-          dmap))
+(defn distance-map
+  [{loc :loc, :as boid} boids]
+  (map #(assoc boid :dist (vm/dist (:loc %) loc)) boids))
+  
+(defn distance-filter
+  [boids l u]
+  (let [l (float l)
+        u (float u)]
+   (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
  
 (defn separation-map [loc dm]
-  (map (fn [[v1 v2]] (-> loc (sub v2) unit (div v1))) dm))
+  (map (fn [[v1 v2]] (-> loc (sub v2) unit (vm/div v1))) dm))
  
 (defn separate [{loc :loc, :as boid} boids]
   (let [dsep      25.0
-        dm        (distance-map boid boids)
-        filtered  (distance-map-filter dm 0.0 dsep)
+        filtered  (map :loc (distance-filter boids 0.0 dsep))
         final     (separation-map loc filtered)
         acount    (count final)
         sum       (or (and final 
                            (reduce add final))
                       vec2-zero)]
     (if (> acount (int 0))
-      (div sum acount)
+      (vm/div sum acount)
       sum)))
  
 (defn dist-vel-loc-map [{loc :loc, :as boid} boids]
@@ -140,33 +133,32 @@
  
 (defn align [{mf :max-force, loc :loc, :as boid} boids]
   (let [nhood     50.0
-        dvl       (dist-vel-loc-map boid boids)
-        filtered  (distance-map-filter dvl 0 nhood)
-        vels      (map (fn [[_ vel]] vel) filtered)
+        filtered  (distance-filter boids 0 nhood)
+        vels      (map :vel filtered)
         acount    (count vels)
         sum       (or (and vels 
                            (reduce add vels))
                       vec2-zero)]
     (if (> acount (int 0))
-      (limit (div sum acount) mf)
+      (limit (vm/div sum acount) mf)
       sum)))
  
 (defn cohesion [{loc :loc, :as boid} boids]
   (let [nhood      50.0
-        dm         (distance-map boid boids)
-        filtered   (distance-map-filter dm 0 nhood)
+        filtered   (map :dist (distance-filter boids 0 nhood))
         acount     (count filtered)
         sum        (or (and (> acount (int 0))
-                            (reduce add (map (fn [[_ n]] n) filtered)))
+                            (reduce add filtered))
                        vec2-zero)]
     (if (> acount (int 0))
-      (steer boid (div sum acount) nil)
+      (steer boid (vm/div sum acount) nil)
       sum)))
  
 (defn flock [{acc :acc, :as boid} boids]
-  (let [sep (-> (separate boid boids) (mult 2.0))
-        ali (-> (align boid boids) (mult 1.0))
-        coh (-> (cohesion boid boids) (mult 1.0))]
+  (let [mboids (distance-map boid boids)
+        sep    (-> (separate boid mboids) (mult 2.0))
+        ali    (-> (align boid mboids) (mult 1.0))
+        coh    (-> (cohesion boid mboids) (mult 1.0))]
     (assoc boid :acc (map + acc sep ali coh))))
  
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
@@ -197,3 +189,72 @@
 
 (comment
   (run flocking1))
+
+(comment
+  ; 3ms normal
+  ; 8ms "fast" memoized
+  (dotimes [_ 10]
+    (let [boids @aflock
+          dmap]
+     (time
+      (dotimes [i 150]
+        (dotimes [j 150]
+          (fast-boid-dist (nth boids i) (nth boids j)))))))
+
+  (def *test-dists* (dists @aflock))
+
+  ; 7ms
+  (dotimes [_ 10]
+    (time
+     (let [ds (dists @aflock)]
+       (dotimes [i 150]
+         (println (count (distance-filter (ds (nth @aflock i)) 0.0 25.0)))))))
+
+  ; 4ms this is too slow
+  (dotimes [_ 10]
+    (time
+     (dotimes [_ 150]
+       (doall (map #(assoc % :dist 5.0) @aflock)))))
+
+  ; 6ms still really slow
+  (dotimes [_ 10]
+    (time
+     (dotimes [_ 150]
+       (loop [x (first @aflock) xs (rest @aflock) result (transient [])]
+         (if (nil? x)
+           (persistent! result)
+           (recur (first xs) (rest xs) (conj! result (assoc x :dist 5.0))))))))
+
+  ; 6ms
+  (dotimes [_ 10]
+    (time
+     (dotimes [_ 150]
+       (doall (map :loc @aflock)))))
+
+  ; 2ms
+  (dotimes [_ 10]
+    (time
+     (dotimes [_ 150]
+       (doseq [boid @aflock]
+         (:loc boid)))))
+
+  (dotimes [_ 10]
+    (let [foo {:bar "baz"}]
+     (time
+      (dotimes [_ (* 150 150)]
+        (:bar foo)))))
+
+  ; 2-3ms
+  (dotimes [_ 10]
+    (let [m {'a 'b 'c 'd 'e 'f 'g 'h 'i 'j}]
+        (time
+         (dotimes [_ (* 150 150)]
+           (assoc m :foo 5.0)))))
+
+  ; < 1ms
+  (dotimes [_ 10]
+    (let [v1 (:loc (nth @aflock 0))
+          v2 (:loc (nth @aflock 1))]
+     (time
+      (dotimes [_ (* 150 150)]
+        (vm/dist v1 v2))))))
