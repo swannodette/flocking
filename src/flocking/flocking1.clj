@@ -185,9 +185,10 @@
   ;; test out what's going wrong
   (do
     (make-flock)
-    (let [[b] @aflock]
-      ; (separation b @aflock)
-      ; (cohesion b @aflock)
-      ; (alignment b @aflock)
-      b))
+    (let [[boid]    @aflock
+          boids     (distance-map boid @aflock)]
+       (separation boid boids)
+       (cohesion boid boids)
+       (alignment boid boids)
+      ))
   )
