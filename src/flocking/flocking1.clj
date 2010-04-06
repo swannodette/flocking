@@ -1,5 +1,5 @@
 (ns flocking.flocking1
-  (:use [vecmath.vec2 :only [vec2 zero]])
+  (:use [vecmath.vec2 :only [vec2 zero sum]])
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm])
@@ -9,12 +9,8 @@
 (def *width* 640)
 (def *height* 480)
 (def *epsilon* (Math/pow 10 -6))
+(def *boid-count* 150)
 (def aflock (atom []))
-
-(defn vec2-sum
- ([] nil) 
- ([a] a)
- ([a b] (vm/add a b)))
 
 (defn limit [v n]
   (vm/mul (vm/unit v) n))
@@ -41,7 +37,6 @@
   (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
 (defn render [{[dx dy] :vel, [x y] :loc, r :r, :as boid}]
-  (swank.core/break)
   (let [dx (float dx)
         dy (float dy)
         r  (float r)
@@ -65,7 +60,7 @@
 (defn make-flock []
   (let [x (/ *width* 2.0)
         y (/ *height* 2.0)]
-   (reset! aflock (into [] (take 2 (boids x y))))))
+   (reset! aflock (into [] (take *boid-count* (boids x y))))))
 
 (declare flock-run)
 
@@ -83,7 +78,6 @@
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
-  (swank.core/break)
   (let [desired  (vm/sub target loc)
         d        (PApplet/dist (float 0.0)
                                (float 0.0)
@@ -116,33 +110,46 @@
 (defn separation-map [{loc :loc :as boid} boids]
   (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
  
-(defn separation [boid boids]
+(defn separation
+  "Calculates the separation vector for a boid
+   with respect to its neighbors. The boids in
+   the second parameter must be distance mapped.
+   See distance-map."
+  [boid boids]
   (let [dsep      25.0
         filtered  (distance-filter boids 0.0 dsep)
         final     (separation-map boid filtered)
-        sum       (reduce vec2-sum final)]
-    (swank.core/break)
+        sum       (reduce sum final)]
     (if sum
       (vm/div sum (count final))
       zero)))
 
-(defn alignment [{mf :max-force :as boid} boids]
+(defn alignment
+  "Calculates the alignment vector for a boid 
+   with respect to its neighbors. The boids in 
+   the second parameter must be distance mapped.
+   See distance-map."
+  [{mf :max-force :as boid} boids]
   (let [nhood     50.0
         filtered  (distance-filter boids 0 nhood)
         vels      (map :vel filtered)
-        sum       (reduce vec2-sum vels)]
+        sum       (reduce sum vels)]
     (if sum
       (limit (vm/div sum (count vels)) mf)
       zero)))
  
-(defn cohesion [boid boids]
+(defn cohesion
+  "Calculates the cohesion vector for a boid
+   with respect to its neighbors. The boids in
+   the second parameter must be distance ampped.
+   See distance-map."
+  [boid boids]
   (let [nhood      50.0
         filtered   (map :dist (distance-filter boids 0 nhood))
-        sum        (reduce vec2-sum filtered)]
-    (swank.core/break)
+        sum        (reduce sum filtered)]
     (if sum
-      (steer boid (vm/div sum (count filtered)) nil)
-      sum)))
+      (steer boid (vm/div sum (count filtered)) false)
+      zero)))
  
 (defn flock [{acc :acc, :as boid} boids]
   (let [mboids (distance-map boid boids)
@@ -174,4 +181,13 @@
 (comment
   (applet/run flocking1)
   (applet/stop flocking1)
+
+  ;; test out what's going wrong
+  (do
+    (make-flock)
+    (let [[b] @aflock]
+      ; (separation b @aflock)
+      ; (cohesion b @aflock)
+      ; (alignment b @aflock)
+      b))
   )
