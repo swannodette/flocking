@@ -2,14 +2,14 @@
   (:use [vecmath.vec2 :only [vec2 zero sum]])
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
-            [vecmath.core :as vm])
-  (:import [processing.core PApplet]))
+            [vecmath.core :as vm]))
 
 (def *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 480)
 (def *epsilon* (Math/pow 10 -6))
 (def *boid-count* 150)
+(def *applet* nil)
 (def aflock (atom []))
 
 (defn limit [v n]
@@ -40,7 +40,7 @@
   (let [dx (float dx)
         dy (float dy)
         r  (float r)
-        theta (+ (PApplet/atan2 dy dx) (/ Math/PI 2.0))]
+        theta (+ p/atan2 (/ Math/PI 2.0))]
     (p/fill-float 200 100)
     (p/stroke-int 255)
     (p/push-matrix)
@@ -65,12 +65,10 @@
 (declare flock-run)
 
 (defn setup []
-  (println "setup")
   (p/framerate 60)
   (make-flock))
 
 (defn draw []
-  (println "draw")
   (p/background-int 50)
   (flock-run))
  
@@ -78,11 +76,8 @@
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
-  (let [desired  (vm/sub target loc)
-        d        (PApplet/dist (float 0.0)
-                               (float 0.0)
-                               (float (:x desired))
-                               (float (:y desired)))]
+  (let [{x :x y :y :as desired} (vm/sub target loc)
+        d                       (p/dist (float 0.0) (float 0.0) (float x) (float y))]
     (cond 
      (> d (float 0.0)) (if (and slowdown (< d (float 100.0)))
                          (-> desired
@@ -118,9 +113,8 @@
   [boid boids]
   (let [dsep      25.0
         filtered  (distance-filter boids 0.0 dsep)
-        final     (separation-map boid filtered)
-        sum       (reduce sum final)]
-    (if sum
+        final     (separation-map boid filtered)]
+    (if-let [sum (reduce sum final)]
       (vm/div sum (count final))
       zero)))
 
@@ -132,9 +126,8 @@
   [{mf :max-force :as boid} boids]
   (let [nhood     50.0
         filtered  (distance-filter boids 0 nhood)
-        vels      (map :vel filtered)
-        sum       (reduce sum vels)]
-    (if sum
+        vels      (map :vel filtered)]
+    (if-let [sum (reduce sum vels)]
       (limit (vm/div sum (count vels)) mf)
       zero)))
  
@@ -145,9 +138,8 @@
    See distance-map."
   [boid boids]
   (let [nhood      50.0
-        filtered   (map :dist (distance-filter boids 0 nhood))
-        sum        (reduce sum filtered)]
-    (if sum
+        filtered   (map :dist (distance-filter boids 0 nhood))]
+    (if-let [sum (reduce sum filtered)]
       (steer boid (vm/div sum (count filtered)) false)
       zero)))
  
@@ -171,15 +163,13 @@
   (map #(boid-run % flock) flock))
 
 (defn flock-run []
-  (println
-   (time
-    (do
-      (swap! aflock flock-run-all)
-      (doseq [boid @aflock]
-        (render boid))))))
+  (do
+    (swap! aflock flock-run-all)
+    (doseq [boid @aflock]
+      (render boid))))
 
 (comment
-  (applet/run flocking1)
+  (applet/run flocking1) 
   (applet/stop flocking1)
 
   ;; test out what's going wrong
@@ -187,8 +177,10 @@
     (make-flock)
     (let [[boid]    @aflock
           boids     (distance-map boid @aflock)]
-       (separation boid boids)
-       (cohesion boid boids)
-       (alignment boid boids)
+;;        (separation boid boids)
+;;        (cohesion boid boids)
+;;        (alignment boid boids)
+;;        (flock-run-all @aflock)
+      (boid-run boid @aflock)
       ))
   )
