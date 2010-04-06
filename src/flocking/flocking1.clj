@@ -1,5 +1,5 @@
 (ns flocking.flocking1
-  (:use [vecmath.vec2 :only [vec2 vec2-zero]])
+  (:use [vecmath.vec2 :only [vec2 zero]])
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm])
@@ -41,6 +41,7 @@
   (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
 (defn render [{[dx dy] :vel, [x y] :loc, r :r, :as boid}]
+  (swank.core/break)
   (let [dx (float dx)
         dy (float dy)
         r  (float r)
@@ -64,7 +65,7 @@
 (defn make-flock []
   (let [x (/ *width* 2.0)
         y (/ *height* 2.0)]
-   (reset! aflock (into [] (take 150 (boids x y))))))
+   (reset! aflock (into [] (take 2 (boids x y))))))
 
 (declare flock-run)
 
@@ -82,6 +83,7 @@
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
+  (swank.core/break)
   (let [desired  (vm/sub target loc)
         d        (PApplet/dist (float 0.0)
                                (float 0.0)
@@ -99,7 +101,7 @@
                              (vm/mul ms)
                              (vm/sub vel)
                              (limit mf)))
-     true vec2-zero)))
+     true zero)))
 
 (defn distance-map
   [{loc :loc, :as boid} boids]
@@ -118,35 +120,28 @@
   (let [dsep      25.0
         filtered  (distance-filter boids 0.0 dsep)
         final     (separation-map boid filtered)
-        acount    (count final)
-        sum       (or (and final 
-                           (reduce vec2-sum final))
-                      vec2-zero)]
-    (if (> acount (int 0))
-      (vm/div sum acount)
-      sum)))
+        sum       (reduce vec2-sum final)]
+    (swank.core/break)
+    (if sum
+      (vm/div sum (count final))
+      zero)))
 
 (defn alignment [{mf :max-force :as boid} boids]
   (let [nhood     50.0
         filtered  (distance-filter boids 0 nhood)
         vels      (map :vel filtered)
-        acount    (count vels)
-        sum       (or (and vels 
-                           (reduce vec2-sum vels))
-                      vec2-zero)]
-    (if (> acount (int 0))
-      (limit (vm/div sum acount) mf)
-      sum)))
+        sum       (reduce vec2-sum vels)]
+    (if sum
+      (limit (vm/div sum (count vels)) mf)
+      zero)))
  
 (defn cohesion [boid boids]
   (let [nhood      50.0
         filtered   (map :dist (distance-filter boids 0 nhood))
-        acount     (count filtered)
-        sum        (or (and (> acount (int 0))
-                            (reduce vec2-sum filtered))
-                       vec2-zero)]
-    (if (> acount (int 0))
-      (steer boid (vm/div sum acount) nil)
+        sum        (reduce vec2-sum filtered)]
+    (swank.core/break)
+    (if sum
+      (steer boid (vm/div sum (count filtered)) nil)
       sum)))
  
 (defn flock [{acc :acc, :as boid} boids]
@@ -180,72 +175,3 @@
   (applet/run flocking1)
   (applet/stop flocking1)
   )
-
-(comment
-  ; 3ms normal
-  ; 8ms "fast" memoized
-  (dotimes [_ 10]
-    (let [boids @aflock
-          dmap]
-     (time
-      (dotimes [i 150]
-        (dotimes [j 150]
-          (fast-boid-dist (nth boids i) (nth boids j)))))))
-
-  (def *test-dists* (dists @aflock))
-
-  ; 7ms
-  (dotimes [_ 10]
-    (time
-     (let [ds (dists @aflock)]
-       (dotimes [i 150]
-         (println (count (distance-filter (ds (nth @aflock i)) 0.0 25.0)))))))
-
-  ; 4ms this is too slow
-  (dotimes [_ 10]
-    (time
-     (dotimes [_ 150]
-       (doall (map #(assoc % :dist 5.0) @aflock)))))
-
-  ; 6ms still really slow
-  (dotimes [_ 10]
-    (time
-     (dotimes [_ 150]
-       (loop [x (first @aflock) xs (rest @aflock) result (transient [])]
-         (if (nil? x)
-           (persistent! result)
-           (recur (first xs) (rest xs) (conj! result (assoc x :dist 5.0))))))))
-
-  ; 6ms
-  (dotimes [_ 10]
-    (time
-     (dotimes [_ 150]
-       (doall (map :loc @aflock)))))
-
-  ; 2ms
-  (dotimes [_ 10]
-    (time
-     (dotimes [_ 150]
-       (doseq [boid @aflock]
-         (:loc boid)))))
-
-  (dotimes [_ 10]
-    (let [foo {:bar "baz"}]
-     (time
-      (dotimes [_ (* 150 150)]
-        (:bar foo)))))
-
-  ; 2-3ms
-  (dotimes [_ 10]
-    (let [m {'a 'b 'c 'd 'e 'f 'g 'h 'i 'j}]
-        (time
-         (dotimes [_ (* 150 150)]
-           (assoc m :foo 5.0)))))
-
-  ; < 1ms
-  (dotimes [_ 10]
-    (let [v1 (:loc (nth @aflock 0))
-          v2 (:loc (nth @aflock 1))]
-     (time
-      (dotimes [_ (* 150 150)]
-        (vm/dist v1 v2))))))
