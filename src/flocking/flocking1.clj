@@ -41,7 +41,8 @@
   (let [dx (float dx)
         dy (float dy)
         r  (float r)
-        theta (float (+ (p/atan2 dy dx) (/ Math/PI 2.0)))]
+        theta (float (+ (float (p/atan2 dy dx))
+                        (float (/ (float Math/PI) (float 2.0)))))]
     (p/fill-float 200 100)
     (p/stroke-int 255)
     (p/push-matrix)
@@ -147,7 +148,7 @@
   (-> (flock boid boids) update borders))
  
 (defn flock-run-all [flock]
-  (map #(boid-run % flock) flock))
+  (pmap #(boid-run % flock) flock))
 
 (def ctime (atom nil))
 (defn flock-run []
@@ -156,10 +157,17 @@
                 (swap! aflock flock-run-all)
                 (doseq [boid @aflock]
                   (render boid)))]
-     (reset! ctime
-             (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
+     (swap! ctime conj (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
 
 (comment
   (applet/run flocking1)
   (applet/stop flocking1)
+
+  (dotimes [_ 20]
+    (time
+     (do
+       (make-flock)
+       (let [boids @aflock]
+         (doseq [boid (flock-run-all boids)]
+           boid)))))
   )
