@@ -7,7 +7,7 @@
 
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
-(def *height* 480)
+(def *height* 360)
 (def *boid-count* 150)
 (def aflock (atom []))
 
@@ -64,6 +64,7 @@
 (declare flock-run)
 
 (defn setup []
+  (p/smooth)
   (make-flock))
 
 (defn draw []
@@ -146,7 +147,7 @@
   (-> (flock boid boids) update borders))
  
 (defn flock-run-all [flock]
-  (pmap #(boid-run % flock) flock))
+  (map #(boid-run % flock) flock))
 
 (defn flock-run []
   (swap! aflock flock-run-all)

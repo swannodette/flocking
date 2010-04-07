@@ -7,7 +7,7 @@
 
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
-(def *height* 480)
+(def *height* 360)
 (def *boid-count* 150)
 
 (defn limit [v n]
@@ -67,6 +67,7 @@
 
 (defn setup []
   (p/framerate 30)
+  (p/smooth)
   (make-flock)
   (flock-run))
 
