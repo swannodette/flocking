@@ -7,6 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
+(def counter (atom 0))
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 480)
@@ -68,12 +69,14 @@
 (declare flock-run)
 
 (defn setup []
+  (p/framerate 30)
   (make-flock))
 
 (defn draw []
+  (swap! counter inc)
   (p/background-int 50)
   (flock-run))
- 
+
 (applet/defapplet flocking2 :title "Flocking 2"
   :setup setup :draw draw :size [*width* *height*])
  
@@ -149,17 +152,22 @@
 (defn boid-run [boid boids]
   (-> (flock boid boids) update borders))
  
-(defn flock-run-all [flock]
-  (map #(send % boid-run flock) flock))
-
 (def ctime (atom nil))
 (defn flock-run []
   (let [start (. System (nanoTime))
         ret   (do
-                (flock-run-all aflock)
-                (doseq [boid aflock]
-                  (render @boid)))]
+                (let [flock (map deref aflock)]
+                 (doseq [boid aflock]
+                   (send boid boid-run flock)              
+                   (render @boid))))]
      (swap! ctime conj (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
+
+(defn flock-run []
+  (do
+    (let [flock (map deref aflock)]
+      (doseq [boid aflock]
+        (send boid boid-run flock)              
+        (render @boid)))))
 
 (comment
   (applet/run flocking2)
