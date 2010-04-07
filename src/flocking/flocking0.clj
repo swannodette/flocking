@@ -1,4 +1,4 @@
-(ns flocking.flocking1
+(ns flocking.flocking0
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]))
 
@@ -49,10 +49,10 @@
     (> n (+ ox dx)) (- ox)
     true n)))
 
-(defn borders [{loc :loc, r :r, :as boid}]
-  (assoc boid :loc [(float (bound (:x loc) r *width*)) (float (bound (:y loc) r *height*))]))
+(defn borders [{[x y] :loc, r :r, :as boid}]
+  (assoc boid :loc [(float (bound x r *width*)) (float (bound y r *height*))]))
  
-(defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
+(defn render [{[dx dy] :vel, [x y] :loc, r :r, :as boid}]
   (let [dx (float dx)
         dy (float dy)
         r  (float r)
@@ -88,12 +88,12 @@
   (p/background-int 50)
   (flock-run))
  
-(applet/defapplet flocking1 :title "Flocking 1"
+(applet/defapplet flocking1 :title "Flocking 0"
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
-  (let [{x :x y :y :as desired} (sub target loc)
-        d                       (float (p/dist (float 0.0) (float 0.0) (float x) (float y)))]
+  (let [[x y :as desired] (sub target loc)
+        d                 (float (p/dist (float 0.0) (float 0.0) (float x) (float y)))]
     (cond 
      (> d (float 0.0)) (if (and slowdown (< d (float 100.0)))
                          (-> desired
@@ -109,8 +109,8 @@
      true zero)))
 
 (defn distance-map
-  [{{x :x y :y :as other} :loc, :as boid} boids]
-  (map (fn [{ox :x oy :y}] (assoc other :dist (float (p/dist ox oy x y)))) boids))
+  [{[x y :as other] :loc, :as boid} boids]
+  (map (fn [[ox oy]] (assoc other :dist (float (p/dist ox oy x y)))) boids))
   
 (defn distance-filter
   [boids l u]
