@@ -63,7 +63,6 @@
 (declare flock-run)
 
 (defn setup []
-  (p/framerate 60)
   (make-flock))
 
 (defn draw []
