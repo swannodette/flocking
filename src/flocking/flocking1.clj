@@ -1,5 +1,6 @@
 (ns flocking.flocking1
-  (:use [vecmath.vec2 :only [vec2 zero sum]])
+  (:use [vecmath.vec2 :only [vec2 zero sum]]
+        clojure.contrib.pprint)
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm]))
@@ -7,9 +8,7 @@
 (def *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 480)
-(def *epsilon* (Math/pow 10 -6))
-(def *boid-count* 5)
-(def *applet* nil)
+(def *boid-count* 150)
 (def aflock (atom []))
 
 (defn limit [v n]
@@ -36,23 +35,22 @@
 (defn borders [{loc :loc, r :r, :as boid}]
   (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
-(defn render [{[dx dy] :vel, [x y] :loc, r :r, :as boid}]
+(defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
   (let [dx (float dx)
         dy (float dy)
         r  (float r)
-        theta (+ p/atan2 (/ Math/PI 2.0))]
-;;     (p/fill-float 200 100)
-;;     (p/stroke-int 255)
-;;     (p/push-matrix)
-;;     (p/translate x y)
-;;     (p/rotate theta)
-;;     (p/begin-shape p/TRIANGLES)
-;;     (p/vertex 0 (* (- r) 2.0))
-;;     (p/vertex (- r) (* r 2.0))
-;;     (p/vertex r (* r 2.0))
-;;     (p/end-shape)
-;;     (p/pop-matrix)
-    ))
+        theta (float (+ (p/atan2 dy dx) (/ Math/PI 2.0)))]
+    (p/fill-float 200 100)
+    (p/stroke-int 255)
+    (p/push-matrix)
+    (p/translate x y)
+    (p/rotate theta)
+    (p/begin-shape :triangles)
+    (p/vertex 0 (* (- r) 2.0))
+    (p/vertex (- r) (* r 2.0))
+    (p/vertex r (* r 2.0))
+    (p/end-shape)
+    (p/pop-matrix)))
 
 (defn boids [x y]
   (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
@@ -68,19 +66,14 @@
   (p/framerate 60)
   (make-flock))
 
-(def counter (atom 0))
-(def trace (atom []))
 (defn draw []
   (p/background-int 50)
-  (swap! counter inc)
-  (flock-run)
-  )
+  (flock-run))
  
 (applet/defapplet flocking1 :title "Flocking 1"
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
-  (swap! trace conj "steer")
   (let [{x :x y :y :as desired} (vm/sub target loc)
         d                       (p/dist (float 0.0) (float 0.0) (float x) (float y))]
     (cond 
@@ -111,12 +104,7 @@
   (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
  
 (defn separation
-  "Calculates the separation vector for a boid
-   with respect to its neighbors. The boids in
-   the second parameter must be distance mapped.
-   See distance-map."
   [boid boids]
-  (swap! trace conj "separation")
   (let [dsep     25.0
         filtered (distance-filter boids 0.0 dsep)
         final    (separation-map boid filtered)]
@@ -125,12 +113,7 @@
       zero)))
 
 (defn alignment
-  "Calculates the alignment vector for a boid 
-   with respect to its neighbors. The boids in 
-   the second parameter must be distance mapped.
-   See distance-map."
   [{mf :max-force :as boid} boids]
-  (swap! trace conj "alignment")
   (let [nhood    50.0
         filtered (distance-filter boids 0 nhood)
         vels     (map :vel filtered)]
@@ -139,14 +122,9 @@
       zero)))
  
 (defn cohesion
-  "Calculates the cohesion vector for a boid
-   with respect to its neighbors. The boids in
-   the second parameter must be distance ampped.
-   See distance-map."
   [boid boids]
-  (swap! trace conj ["cohesion" boid])
   (let [nhood    50.0
-        filtered (map :dist (distance-filter boids 0 nhood))]
+        filtered (map :loc (distance-filter boids 0 nhood))]
     (if-let [sum (reduce sum filtered)]
       (steer boid (vm/div sum (count filtered)) false)
       zero)))
@@ -156,7 +134,6 @@
         sep    (-> (separation boid mboids) (vm/mul 2.0))
         ali    (-> (alignment boid mboids) (vm/mul 1.0))
         coh    (-> (cohesion boid mboids) (vm/mul 1.0))]
-    (swap! trace conj "will update boid")
     (assoc boid :acc (-> acc (vm/add sep) (vm/add ali) (vm/add coh)))))
  
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
@@ -166,36 +143,18 @@
     :acc (vm/mul acc 0.0)))
 
 (defn boid-run [boid boids]
-  (swap! trace conj "----- boid run")
   (-> (flock boid boids) update borders))
  
 (defn flock-run-all [flock]
-  (swap! trace conj ">>>>> flock-run-all")
   (map #(boid-run % flock) flock))
 
 (defn flock-run []
   (do
     (swap! aflock flock-run-all)
     (doseq [boid @aflock]
-      ;(render boid)
-      )))
+      (render boid))))
 
 (comment
-  (do
-    (reset! trace [])
-    (applet/run flocking1))
+  (applet/run flocking1)
   (applet/stop flocking1)
-
-  ;; test out what's going wrong
-  (use 'clojure.contrib.pprint)
-  (do
-    (make-flock)
-    (let [[boid]    @aflock
-          boids     (distance-map boid @aflock)]
-;;        (separation boid boids)
-;;        (cohesion boid boids)
-;;        (alignment boid boids)
-;;        (flock-run-all @aflock)
-      (pprint (flock-run-all @aflock))
-      ))
   )
