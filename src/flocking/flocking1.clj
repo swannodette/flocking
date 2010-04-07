@@ -8,7 +8,7 @@
 (def *width* 640)
 (def *height* 480)
 (def *epsilon* (Math/pow 10 -6))
-(def *boid-count* 150)
+(def *boid-count* 5)
 (def *applet* nil)
 (def aflock (atom []))
 
@@ -41,18 +41,18 @@
         dy (float dy)
         r  (float r)
         theta (+ p/atan2 (/ Math/PI 2.0))]
-    (p/fill-float 200 100)
-    (p/stroke-int 255)
-    (p/push-matrix)
-    (p/translate x y)
-    (p/rotate theta)
-    (p/begin-shape TRIANGLES)
-    (p/vertex 0 (* (- r) 2.0))
-    (p/vertex (- r) (* r 2.0))
-    (p/vertex r (* r 2.0))
-    (p/end-shape)
-    (p/pop-matrix)
-    boid))
+;;     (p/fill-float 200 100)
+;;     (p/stroke-int 255)
+;;     (p/push-matrix)
+;;     (p/translate x y)
+;;     (p/rotate theta)
+;;     (p/begin-shape p/TRIANGLES)
+;;     (p/vertex 0 (* (- r) 2.0))
+;;     (p/vertex (- r) (* r 2.0))
+;;     (p/vertex r (* r 2.0))
+;;     (p/end-shape)
+;;     (p/pop-matrix)
+    ))
 
 (defn boids [x y]
   (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
@@ -68,14 +68,19 @@
   (p/framerate 60)
   (make-flock))
 
+(def counter (atom 0))
+(def trace (atom []))
 (defn draw []
   (p/background-int 50)
-  (flock-run))
+  (swap! counter inc)
+  (flock-run)
+  )
  
 (applet/defapplet flocking1 :title "Flocking 1"
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
+  (swap! trace conj "steer")
   (let [{x :x y :y :as desired} (vm/sub target loc)
         d                       (p/dist (float 0.0) (float 0.0) (float x) (float y))]
     (cond 
@@ -111,9 +116,10 @@
    the second parameter must be distance mapped.
    See distance-map."
   [boid boids]
-  (let [dsep      25.0
-        filtered  (distance-filter boids 0.0 dsep)
-        final     (separation-map boid filtered)]
+  (swap! trace conj "separation")
+  (let [dsep     25.0
+        filtered (distance-filter boids 0.0 dsep)
+        final    (separation-map boid filtered)]
     (if-let [sum (reduce sum final)]
       (vm/div sum (count final))
       zero)))
@@ -124,9 +130,10 @@
    the second parameter must be distance mapped.
    See distance-map."
   [{mf :max-force :as boid} boids]
-  (let [nhood     50.0
-        filtered  (distance-filter boids 0 nhood)
-        vels      (map :vel filtered)]
+  (swap! trace conj "alignment")
+  (let [nhood    50.0
+        filtered (distance-filter boids 0 nhood)
+        vels     (map :vel filtered)]
     (if-let [sum (reduce sum vels)]
       (limit (vm/div sum (count vels)) mf)
       zero)))
@@ -137,8 +144,9 @@
    the second parameter must be distance ampped.
    See distance-map."
   [boid boids]
-  (let [nhood      50.0
-        filtered   (map :dist (distance-filter boids 0 nhood))]
+  (swap! trace conj ["cohesion" boid])
+  (let [nhood    50.0
+        filtered (map :dist (distance-filter boids 0 nhood))]
     (if-let [sum (reduce sum filtered)]
       (steer boid (vm/div sum (count filtered)) false)
       zero)))
@@ -148,6 +156,7 @@
         sep    (-> (separation boid mboids) (vm/mul 2.0))
         ali    (-> (alignment boid mboids) (vm/mul 1.0))
         coh    (-> (cohesion boid mboids) (vm/mul 1.0))]
+    (swap! trace conj "will update boid")
     (assoc boid :acc (-> acc (vm/add sep) (vm/add ali) (vm/add coh)))))
  
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
@@ -157,22 +166,28 @@
     :acc (vm/mul acc 0.0)))
 
 (defn boid-run [boid boids]
+  (swap! trace conj "----- boid run")
   (-> (flock boid boids) update borders))
  
 (defn flock-run-all [flock]
+  (swap! trace conj ">>>>> flock-run-all")
   (map #(boid-run % flock) flock))
 
 (defn flock-run []
   (do
     (swap! aflock flock-run-all)
     (doseq [boid @aflock]
-      (render boid))))
+      ;(render boid)
+      )))
 
 (comment
-  (applet/run flocking1) 
+  (do
+    (reset! trace [])
+    (applet/run flocking1))
   (applet/stop flocking1)
 
   ;; test out what's going wrong
+  (use 'clojure.contrib.pprint)
   (do
     (make-flock)
     (let [[boid]    @aflock
@@ -181,6 +196,6 @@
 ;;        (cohesion boid boids)
 ;;        (alignment boid boids)
 ;;        (flock-run-all @aflock)
-      (boid-run boid @aflock)
+      (pprint (flock-run-all @aflock))
       ))
   )
