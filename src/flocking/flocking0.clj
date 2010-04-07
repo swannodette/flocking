@@ -33,9 +33,9 @@
 
 (defn make-boid [loc ms mf]
   {:loc       loc
-   :vel       (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
-                    (+ (* (.nextFloat *rnd*) 2) -1))
-   :acc       (vec2 0 0)
+   :vel       [(float (+ (* (.nextFloat *rnd*) 2) -1))
+               (float (+ (* (.nextFloat *rnd*) 2) -1))]
+   :acc       [(float 0.0) (float 0.0)]
    :r         2.0
    :max-speed ms
    :max-force mf})
@@ -50,7 +50,7 @@
     true n)))
 
 (defn borders [{loc :loc, r :r, :as boid}]
-  (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
+  (assoc boid :loc [(float (bound (:x loc) r *width*)) (float (bound (:y loc) r *height*))]))
  
 (defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
   (let [dx (float dx)
@@ -71,7 +71,7 @@
     (p/pop-matrix)))
 
 (defn boids [x y]
-  (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
+  (repeatedly #(make-boid [(float x) (float y)] 2.0 0.05)))
  
 (defn make-flock []
   (let [x (/ *width* 2.0)
@@ -109,8 +109,8 @@
      true zero)))
 
 (defn distance-map
-  [{loc :loc, :as boid} boids]
-  (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc))) boids))
+  [{{x :x y :y :as other} :loc, :as boid} boids]
+  (map (fn [{ox :x oy :y}] (assoc other :dist (float (p/dist ox oy x y)))) boids))
   
 (defn distance-filter
   [boids l u]
@@ -152,12 +152,12 @@
         sep    (-> (separation boid mboids) (mul 2.0))
         ali    (-> (alignment boid mboids) (mul 1.0))
         coh    (-> (cohesion boid mboids) (mul 1.0))]
-    (assoc boid :acc (-> acc (vm/add sep) (vm/add ali) (vm/add coh)))))
+    (assoc boid :acc (-> acc (add sep) (add ali) (add coh)))))
  
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
   (assoc boid 
-    :vel (limit (vm/add vel acc) ms)
-    :loc (vm/add loc vel)
+    :vel (limit (add vel acc) ms)
+    :loc (add loc vel)
     :acc (mul acc 0.0)))
 
 (defn boid-run [boid boids]
