@@ -2,17 +2,45 @@
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]))
 
-(defn mul [v s]
-  (map #(* (float %) (float s)) v))
+(defn mul [[x y] s]
+  (let [x (float x)
+        y (float y)
+        s (float s)]
+    [(* x s) (* y s)]))
 
-(defn div [v s]
-  (map #(/ (float %) (float s)) v))
+(defn mul [[x y] s]
+  (let [x (float x)
+        y (float y)
+        s (float s)]
+    [(/ x s) (/ y s)]))
 
-(defn add [v1 v2]
-  (map + v1 v2))
+(defn add [[x1 y1] [x2 y2]]
+  (let [x1 (float x1)
+        y1 (float y1)
+        x2 (float x2)
+        y2 (float y2)]
+    [(+ x1 x2) (+ y1 y2)]))
 
-(defn sub [v1 v2]
-  (map - v1 v2))
+(defn sum
+  ([] nil)
+  ([a] a)
+  ([a b] (add a b)))
+
+(comment
+  (dotimes [_ 10]
+    (let [v1 [5.5 3.3]
+          v2 [9.9 -2.1]]
+     (time
+      (dotimes [_ 1000000]
+        (add v1 v2)))))
+  )
+
+(defn sub [[x1 y1] [x2 y2]]
+  (let [x1 (float x1)
+        y1 (float y1)
+        x2 (float x2)
+        y2 (float y2)]
+    [(- x1 x2) (- y1 y2)]))
 
 (defn unit [[x y]]
   (let [x (float x)
@@ -20,7 +48,7 @@
 	d (float (p/dist 0 0 x y))]
     [(/ x d) (/ y d)]))
 
-(def zero [(float 0.0) (float 0.0)])
+(def zero [0.0 0.0])
 
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
@@ -126,7 +154,7 @@
   (let [dsep     25.0
         filtered (distance-filter boids 0.0 dsep)
         final    (separation-map boid filtered)]
-    (if-let [sum (reduce + final)]
+    (if-let [sum (reduce sum final)]
       (div sum (count final))
       zero)))
 
@@ -135,7 +163,7 @@
   (let [nhood    50.0
         filtered (distance-filter boids 0 nhood)
         vels     (map :vel filtered)]
-    (if-let [sum (reduce + vels)]
+    (if-let [sum (reduce sum vels)]
       (limit (div sum (count vels)) mf)
       zero)))
  
@@ -143,7 +171,7 @@
   [boid boids]
   (let [nhood    50.0
         filtered (map :loc (distance-filter boids 0 nhood))]
-    (if-let [sum (reduce + filtered)]
+    (if-let [sum (reduce sum filtered)]
       (steer boid (div sum (count filtered)) false)
       zero)))
  
