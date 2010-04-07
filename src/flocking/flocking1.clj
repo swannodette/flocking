@@ -5,8 +5,6 @@
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm]))
 
-(set! *warn-on-reflection* true)
-
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 480)
@@ -150,24 +148,7 @@
 (defn flock-run-all [flock]
   (pmap #(boid-run % flock) flock))
 
-(def ctime (atom nil))
 (defn flock-run []
-  (let [start (. System (nanoTime))
-        ret   (do
-                (swap! aflock flock-run-all)
-                (doseq [boid @aflock]
-                  (render boid)))]
-     (swap! ctime conj (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
-
-(comment
-  (applet/run flocking1)
-  (applet/stop flocking1)
-
-  (dotimes [_ 20]
-    (time
-     (do
-       (make-flock)
-       (let [boids @aflock]
-         (doseq [boid (flock-run-all boids)]
-           boid)))))
-  )
+  (swap! aflock flock-run-all)
+  (doseq [boid @aflock]
+    (render boid)))

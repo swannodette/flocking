@@ -5,9 +5,6 @@
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm]))
 
-(set! *warn-on-reflection* true)
-
-(def counter (atom 0))
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 480)
@@ -70,12 +67,13 @@
 
 (defn setup []
   (p/framerate 30)
-  (make-flock))
+  (make-flock)
+  (flock-run))
 
 (defn draw []
-  (swap! counter inc)
   (p/background-int 50)
-  (flock-run))
+  (doseq [boid (map deref aflock)]
+    (render boid)))
 
 (applet/defapplet flocking2 :title "Flocking 2"
   :setup setup :draw draw :size [*width* *height*])
@@ -150,34 +148,11 @@
     :acc (vm/mul acc 0.0)))
 
 (defn boid-run [boid boids]
+  (. Thread (sleep 33))
+  (send-off *agent* boid-run (map deref aflock))
   (-> (flock boid boids) update borders))
- 
-(def ctime (atom nil))
-(defn flock-run []
-  (let [start (. System (nanoTime))
-        ret   (do
-                (let [flock (map deref aflock)]
-                 (doseq [boid aflock]
-                   (send boid boid-run flock)              
-                   (render @boid))))]
-     (swap! ctime conj (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
 
 (defn flock-run []
-  (do
-    (let [flock (map deref aflock)]
-      (doseq [boid aflock]
-        (send boid boid-run flock)              
-        (render @boid)))))
-
-(comment
-  (applet/run flocking2)
-  (applet/stop flocking2)
-
-  (dotimes [_ 50]
-    (time
-     (do
-       (make-flock)
-       (let [boids @aflock]
-         (doseq [boid (flock-run-all boids)]
-           boid)))))
-  )
+  (let [flock (into [] (map deref aflock))]
+    (doseq [boid aflock]
+      (send-off boid boid-run flock))))
