@@ -74,7 +74,7 @@
   (p/background-int 50)
   (flock-run))
  
-(applet/defapplet flocking1 :title "Flocking 1"
+(applet/defapplet flocking2 :title "Flocking 2"
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
@@ -156,14 +156,14 @@
 (defn flock-run []
   (let [start (. System (nanoTime))
         ret   (do
-                (swap! aflock flock-run-all)
+                (flock-run-all aflock)
                 (doseq [boid aflock]
                   (render @boid)))]
      (swap! ctime conj (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
 
 (comment
-  (applet/run flocking1)
-  (applet/stop flocking1)
+  (applet/run flocking2)
+  (applet/stop flocking2)
 
   (dotimes [_ 50]
     (time
