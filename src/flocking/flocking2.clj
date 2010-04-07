@@ -1,4 +1,4 @@
-(ns flocking.flocking1
+(ns flocking.flocking2
   (:use [vecmath.vec2 :only [vec2 zero sum]]
         clojure.contrib.pprint)
   (:require [rosado.processing :as p]
@@ -11,19 +11,19 @@
 (def *width* 640)
 (def *height* 480)
 (def *boid-count* 150)
-(def aflock (atom []))
 
 (defn limit [v n]
   (vm/mul (vm/unit v) n))
 
 (defn make-boid [loc ms mf]
-  {:loc       loc
-   :vel       (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
-                    (+ (* (.nextFloat *rnd*) 2) -1))
-   :acc       (vec2 0 0)
-   :r         2.0
-   :max-speed ms
-   :max-force mf})
+  (agent
+   {:loc       loc
+    :vel       (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
+                     (+ (* (.nextFloat *rnd*) 2) -1))
+    :acc       (vec2 0 0)
+    :r         2.0
+    :max-speed ms
+    :max-force mf}))
  
 (defn bound [n ox dx]
   (let [n  (int n)
@@ -37,9 +37,11 @@
 (defn borders [{loc :loc, r :r, :as boid}]
   (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
-(defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
-  (let [dx (float dx)
-        dy (float dy)
+(defn render [{vel :vel, loc :loc, r :r, :as boid}]
+  (let [dx (float (:x vel))
+        dy (float (:y vel))
+        x  (float (:x loc))
+        y  (float (:y loc))
         r  (float r)
         theta (float (+ (float (p/atan2 dy dx))
                         (float (/ (float Math/PI) (float 2.0)))))]
@@ -61,7 +63,7 @@
 (defn make-flock []
   (let [x (/ *width* 2.0)
         y (/ *height* 2.0)]
-   (reset! aflock (into [] (take *boid-count* (boids x y))))))
+   (def aflock (into [] (take *boid-count* (boids x y))))))
 
 (declare flock-run)
 
@@ -148,22 +150,22 @@
   (-> (flock boid boids) update borders))
  
 (defn flock-run-all [flock]
-  (pmap #(boid-run % flock) flock))
+  (map #(send % boid-run flock) flock))
 
 (def ctime (atom nil))
 (defn flock-run []
   (let [start (. System (nanoTime))
         ret   (do
                 (swap! aflock flock-run-all)
-                (doseq [boid @aflock]
-                  (render boid)))]
+                (doseq [boid aflock]
+                  (render @boid)))]
      (swap! ctime conj (str "Elapsed time: " (/ (double (- (. System (nanoTime)) start)) 1000000.0) " msecs"))))
 
 (comment
   (applet/run flocking1)
   (applet/stop flocking1)
 
-  (dotimes [_ 20]
+  (dotimes [_ 50]
     (time
      (do
        (make-flock)
