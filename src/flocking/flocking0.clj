@@ -21,19 +21,19 @@
         y2 (float y2)]
     [(+ x1 x2) (+ y1 y2)]))
 
+(comment
+  (dotimes [_ 10]
+    (let [v1 [5.5 3]
+          v2 [0.3 9]]
+      (time
+       (dotimes [_ 1000000]
+         (add v1 v2)))))
+  )
+
 (defn sum
   ([] nil)
   ([a] a)
   ([a b] (add a b)))
-
-(comment
-  (dotimes [_ 10]
-    (let [v1 [5.5 3.3]
-          v2 [9.9 -2.1]]
-     (time
-      (dotimes [_ 1000000]
-        (add v1 v2)))))
-  )
 
 (defn sub [[x1 y1] [x2 y2]]
   (let [x1 (float x1)
@@ -116,7 +116,7 @@
   (p/background-int 50)
   (flock-run))
  
-(applet/defapplet flocking1 :title "Flocking 0"
+(applet/defapplet flocking0 :title "Flocking 0"
   :setup setup :draw draw :size [*width* *height*])
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]

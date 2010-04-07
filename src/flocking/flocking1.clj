@@ -28,8 +28,8 @@
         ox (int ox)
         dx (int dx)]
    (cond 
-    (< n (- ox))    (+ dx ox)
-    (> n (+ ox dx)) (- ox)
+    (< n (int (- ox)))    (+ dx ox)
+    (> n (int (+ ox dx))) (- ox)
     true n)))
 
 (defn borders [{loc :loc, r :r, :as boid}]
@@ -76,7 +76,7 @@
  
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
   (let [{x :x y :y :as desired} (vm/sub target loc)
-        d                       (p/dist (float 0.0) (float 0.0) (float x) (float y))]
+        d                       (float (p/dist (float 0.0) (float 0.0) (float x) (float y)))]
     (cond 
      (> d (float 0.0)) (if (and slowdown (< d (float 100.0)))
                          (-> desired
