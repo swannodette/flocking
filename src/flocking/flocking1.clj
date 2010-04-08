@@ -5,6 +5,19 @@
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm]))
 
+(defprotocol StoreDist
+  (set-dist [this dist]))
+
+(declare dist-boid)
+
+(deftype boid
+  [loc vel acc r max-speed max-force]
+  StoreDist
+  (set-dist [_ dist] (dist-boid loc vel acc r max-speed max-force dist)))
+
+(deftype dist-boid
+  [loc vel acc r max-speed max-force dist])
+
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
 (def *height* 360)
@@ -219,4 +232,20 @@
      (time
       (dotimes [_ (* 150 150)]
         (conj v 'x)))))
+
+  ; 2x as fast as below
+  (dotimes [_ 10]
+    (let [v1 (vec2 0 0)
+          v2 (vec2 0 0)
+          v3 (vec2 0 0)]
+     (time
+      (dotimes [_ 1000000]
+        (dist-boid v1 v2 v3 2.0 2.0 0.05 20.5)))))
+
+  ; map with 6 entries + assoc
+  (dotimes [_ 10]
+    (let [m {:a 'a :b 'b :c 'c :d 'd :e 'e :f 'f}]
+     (time
+      (dotimes [_ 1000000]
+        (assoc m :foo "bar")))))
   )
