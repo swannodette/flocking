@@ -92,8 +92,9 @@
      true zero)))
 
 (defn distance-map
-  [{loc :loc, :as boid} boids]
-  (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc))) boids))
+  [boid boids]
+  (let [loc (:loc boid)]
+   (map (fn [other] (assoc other :dist (float (vm/dist (:loc other) loc)))) boids)))
   
 (defn distance-filter
   [boids l u]
