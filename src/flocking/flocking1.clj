@@ -173,6 +173,9 @@
       (doseq [b bs]
         (separation b bs)))))
 
+  ;; test
+  (distance-filter (distance-map (nth @aflock 0) @aflock) 0 50.0)
+
   ; 2.1ms
   (dotimes [_ 100]
     (let [b  (nth @aflock 0)
