@@ -95,7 +95,7 @@
   [boid boids]
   (let [loc (:loc boid)]
     (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc))) boids)))
-  
+
 (defn distance-filter
   [boids l u]
   (let [l (float l)
@@ -156,3 +156,64 @@
   (swap! aflock flock-run-all)
   (doseq [boid @aflock]
     (render boid)))
+
+(comment
+  (make-flock)
+
+  ; 11-13ms
+  (dotimes [_ 100]
+    (time
+     (reset! aflock (doall (flock-run-all @aflock)))))
+
+  ; 1.7ms
+  (dotimes [_ 100]
+    (let [b  (nth @aflock 0)
+          bs (distance-map b @aflock)]
+     (time
+      (doseq [b bs]
+        (separation b bs)))))
+
+  ; 2.1ms
+  (dotimes [_ 100]
+    (let [b  (nth @aflock 0)
+          bs (distance-map b @aflock)]
+     (time
+      (doseq [b bs]
+        (alignment b bs)))))
+
+  ; 2.2ms
+  (dotimes [_ 100]
+    (let [b  (nth @aflock 0)
+          bs (distance-map b @aflock)]
+     (time
+      (doseq [b bs]
+        (cohesion b bs)))))
+
+  ; 6ms
+  (dotimes [_ 100]
+    (let [bs @aflock]
+     (time
+      (doseq [b bs]
+        (doall (distance-map b bs))))))
+
+  ; < 1ms
+  (dotimes [_ 100]
+    (let [b {:loc (vec2 5.25 9.2)}
+          v (vec2 3.3 1.1)]
+     (time
+      (dotimes [_ (* 150 150)]
+        (vm/dist (:loc b) v)))))
+
+  (dotimes [_ 100]
+    (let [b (vec2 5.25 9.2)
+          v (vec2 3.3 1.1)]
+     (time
+      (dotimes [_ (* 150 150)]
+        (vm/dist b v)))))
+
+  (dotimes [_ 100]
+    (let [v (into [] (range 10))]
+     (time
+      (dotimes [_ (* 150 150)]
+        (conj v 'x)))))
+  )
