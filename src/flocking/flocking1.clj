@@ -112,10 +112,9 @@
 (defn separation
   [boid boids]
   (let [dsep     25.0
-        filtered (distance-filter boids 0.0 dsep)
-        final    (separation-map boid filtered)]
-    (if-let [sum (reduce sum final)]
-      (vm/div sum (count final))
+        filtered (separation-map boid (distance-filter boids 0.0 dsep))]
+    (if-let [sum (reduce sum filtered)]
+      (vm/div sum (count filtered))
       zero)))
 
 (defn alignment
