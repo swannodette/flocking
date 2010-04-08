@@ -135,10 +135,15 @@
   [boids l u]
   (let [l (float l)
         u (float u)]
-   (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
+   (filter (fn [other]
+             (let [d (float (:dist other))] (and (> d l) (< d u)))) boids)))
 
 (defn separation-map [{loc :loc :as boid} boids]
-  (map (fn [{d :dist oloc :loc}] (-> loc (sub oloc) unit (div d))) boids))
+  (map (fn [other]
+         (let [d (:dist other)
+               oloc (:loc other)]
+           (-> loc (sub oloc) unit (div d))))
+       boids))
  
 (defn separation
   [boid boids]

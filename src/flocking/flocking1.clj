@@ -94,16 +94,20 @@
 (defn distance-map
   [boid boids]
   (let [loc (:loc boid)]
-   (map (fn [other] (assoc other :dist (float (vm/dist (:loc other) loc)))) boids)))
+    (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc))) boids)))
   
 (defn distance-filter
   [boids l u]
   (let [l (float l)
         u (float u)]
-   (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
+   (filter (fn [other] (let [d (float (:dist other))] (and (> d l) (< d u)))) boids)))
 
 (defn separation-map [{loc :loc :as boid} boids]
-  (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
+  (map (fn [other]
+         (let [d (:dist other)
+               oloc (:loc other)]
+          (-> loc (vm/sub oloc) vm/unit (vm/div d))))
+       boids))
  
 (defn separation
   [boid boids]
