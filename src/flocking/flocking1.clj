@@ -121,10 +121,9 @@
 (defn alignment
   [{mf :max-force :as boid} boids]
   (let [nhood    50.0
-        filtered (distance-filter boids 0 nhood)
-        vels     (map :vel filtered)]
-    (if-let [sum (reduce sum vels)]
-      (limit (vm/div sum (count vels)) mf)
+        filtered (map :vel (distance-filter boids 0 nhood))]
+    (if-let [sum (reduce sum filtered)]
+      (limit (vm/div sum (count filtered)) mf)
       zero)))
  
 (defn cohesion
