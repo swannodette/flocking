@@ -8,7 +8,7 @@
         s (float s)]
     [(* x s) (* y s)]))
 
-(defn mul [[x y] s]
+(defn div [[x y] s]
   (let [x (float x)
         y (float y)
         s (float s)]
@@ -20,15 +20,6 @@
         x2 (float x2)
         y2 (float y2)]
     [(+ x1 x2) (+ y1 y2)]))
-
-(comment
-  (dotimes [_ 10]
-    (let [v1 [5.5 3]
-          v2 [0.3 9]]
-      (time
-       (dotimes [_ 1000000]
-         (add v1 v2)))))
-  )
 
 (defn sum
   ([] nil)
