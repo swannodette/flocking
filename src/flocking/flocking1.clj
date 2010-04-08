@@ -5,18 +5,9 @@
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm]))
 
-(defprotocol StoreDist
-  (set-dist [this dist]))
-
-(declare dist-boid)
-
-(deftype boid
-  [loc vel acc r max-speed max-force]
-  StoreDist
-  (set-dist [_ dist] (dist-boid loc vel acc r max-speed max-force dist)))
-
 (deftype dist-boid
-  [loc vel acc r max-speed max-force dist])
+  [loc vel acc r max-speed max-force dist]
+  clojure.lang.IPersistentMap)
 
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640)
@@ -106,8 +97,9 @@
 
 (defn distance-map
   [boid boids]
-  (let [loc (:loc boid)]
-    (map (fn [other] (assoc other :dist (vm/dist (:loc other) loc))) boids)))
+  (let [bloc (:loc boid)]
+    (map (fn [{:keys [loc vel acc r max-speed max-force] :as other}]
+           (dist-boid loc vel acc r max-speed max-force (vm/dist loc bloc))) boids)))
 
 (defn distance-filter
   [boids l u]
@@ -173,12 +165,12 @@
 (comment
   (make-flock)
 
-  ; 11-13ms
+  ; 10-12ms
   (dotimes [_ 100]
     (time
      (reset! aflock (doall (flock-run-all @aflock)))))
 
-  ; 1.7ms
+  ; 1.1ms
   (dotimes [_ 100]
     (let [b  (nth @aflock 0)
           bs (distance-map b @aflock)]
@@ -186,10 +178,7 @@
       (doseq [b bs]
         (separation b bs)))))
 
-  ;; test
-  (distance-filter (distance-map (nth @aflock 0) @aflock) 0 50.0)
-
-  ; 2.1ms
+  ; 1.1ms
   (dotimes [_ 100]
     (let [b  (nth @aflock 0)
           bs (distance-map b @aflock)]
@@ -197,7 +186,7 @@
       (doseq [b bs]
         (alignment b bs)))))
 
-  ; 2.2ms
+  ; 1.1ms
   (dotimes [_ 100]
     (let [b  (nth @aflock 0)
           bs (distance-map b @aflock)]
@@ -205,47 +194,10 @@
       (doseq [b bs]
         (cohesion b bs)))))
 
-  ; 6ms
+  ; 7ms
   (dotimes [_ 100]
     (let [bs @aflock]
      (time
       (doseq [b bs]
         (doall (distance-map b bs))))))
-
-  ; < 1ms
-  (dotimes [_ 100]
-    (let [b {:loc (vec2 5.25 9.2)}
-          v (vec2 3.3 1.1)]
-     (time
-      (dotimes [_ (* 150 150)]
-        (vm/dist (:loc b) v)))))
-
-  (dotimes [_ 100]
-    (let [b (vec2 5.25 9.2)
-          v (vec2 3.3 1.1)]
-     (time
-      (dotimes [_ (* 150 150)]
-        (vm/dist b v)))))
-
-  (dotimes [_ 100]
-    (let [v (into [] (range 10))]
-     (time
-      (dotimes [_ (* 150 150)]
-        (conj v 'x)))))
-
-  ; 2x as fast as below
-  (dotimes [_ 10]
-    (let [v1 (vec2 0 0)
-          v2 (vec2 0 0)
-          v3 (vec2 0 0)]
-     (time
-      (dotimes [_ 1000000]
-        (dist-boid v1 v2 v3 2.0 2.0 0.05 20.5)))))
-
-  ; map with 6 entries + assoc
-  (dotimes [_ 10]
-    (let [m {:a 'a :b 'b :c 'c :d 'd :e 'e :f 'f}]
-     (time
-      (dotimes [_ 1000000]
-        (assoc m :foo "bar")))))
   )
