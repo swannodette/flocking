@@ -128,8 +128,8 @@
      true zero)))
 
 (defn distance-map
-  [{[x y :as other] :loc, :as boid} boids]
-  (map (fn [[ox oy]] (assoc other :dist (float (p/dist ox oy x y)))) boids))
+  [{[x y] :loc, :as boid} boids]
+  (map (fn [{[ox oy] :loc :as other}] (assoc other :dist (float (p/dist ox oy x y)))) boids))
   
 (defn distance-filter
   [boids l u]
