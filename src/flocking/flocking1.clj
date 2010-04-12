@@ -60,10 +60,12 @@
 (defn boids [x y]
   (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
  
-(defn make-flock []
-  (let [x (/ *width* 2.0)
-        y (/ *height* 2.0)]
-   (reset! aflock (into [] (take *boid-count* (boids x y))))))
+(defn make-flock
+  ([] (make-flock *boid-count*))
+  ([n]
+   (let [x (/ *width* 2.0)
+         y (/ *height* 2.0)]
+     (reset! aflock (into [] (take n (boids x y)))))))
 
 (declare flock-run)
 
