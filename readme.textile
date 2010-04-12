@@ -24,7 +24,50 @@ This version uses an agent for each boid. Not very efficient but an interesting 
 
 h2. flocking3.clj
 
-This version uses two agents and is probably the most efficient implementation. It fully utilizes two cores if you have them.
+This version uses pmap. This version provides the best performance as well as "look". With 2 cores this version is between 1.6X-2X the speed of Java and you don't see stuttering as you do in the following version. This is impressive considering the fact that this version is functional, performant, and parallel and yet shorter than the Java version!
+
+<pre class="code">
+(defn separation
+  [boid boids]
+  (let [dsep     25.0
+        filtered (separation-map boid (distance-filter boids 0.0 dsep))]
+    (if-let [sum (reduce sum filtered)]
+      (vm/div sum (count filtered))
+      zero)))
+</pre> 
+
+versus:
+
+<pre class="code">
+PVector separate (ArrayList boids) {
+  float desiredseparation = 25.0;
+  PVector sum = new PVector(0,0,0);
+  int count = 0;
+  // For every boid in the system, check if it's too close
+  for (int i = 0 ; i < boids.size(); i++) {
+    Boid other = (Boid) boids.get(i);
+    float d = loc.dist(other.loc);
+    // If the distance is greater than 0 and less than an arbitrary amount (0 when you are yourself)
+    if ((d > 0) && (d < desiredseparation)) {
+      // Calculate vector pointing away from neighbor
+      PVector diff = loc.sub(loc,other.loc);
+      diff.normalize();
+      diff.div(d);        // Weight by distance
+      sum.add(diff);
+      count++;            // Keep track of how many
+    }
+  }
+  // Average -- divide by how many
+  if (count > 0) {
+    sum.div((float)count);
+  }
+  return sum;
+}
+</pre>
+
+h2. flocking4.clj
+
+This version uses two agents and is mostly interesting. Because the drawing thread and update thread are completely seperate you see pauses.
 
 h2. flocking_old.clj
 

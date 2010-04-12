@@ -13,7 +13,7 @@
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640.0)
 (def *height* 360.0)
-(def *boid-count* 300)
+(def *boid-count* 150)
 (def *cores* (.. Runtime getRuntime availableProcessors))
 (def aflock (atom nil))
 
@@ -92,15 +92,10 @@
   (let [{x :x y :y :as desired} (vm/sub target loc)
         d                       (float (p/dist 0.0 0.0 x y))]
     (cond 
-     (> d (float 0.0)) (if (and slowdown (< d (float 100.0)))
-                         (-> desired
-                             vm/unit
-                             (vm/mul (* ms (/ d (float 100.0))))
-                             (vm/sub vel)
-                             (limit mf))
-                         (-> desired
-                             vm/unit
-                             (vm/mul ms)
+     (> d (float 0.0)) (let [unit (vm/unit desired)]
+                         (-> (if (and slowdown (< d (float 100.0)))
+                               (-> unit (vm/mul (* ms (/ d (float 100.0)))))
+                               (-> unit (vm/mul ms)))
                              (vm/sub vel)
                              (limit mf)))
      true zero)))
@@ -110,13 +105,8 @@
   (let [bloc (:loc boid)]
     (map (fn [other]
            (let [loc (:loc other)]
-            (dist-boid loc
-                       (:vel other)
-                       (:acc other)
-                       (:r other)
-                       (:max-speed other)
-                       (:max-force other)
-                       (vm/dist loc bloc)))) boids)))
+            (dist-boid loc (:vel other) (:acc other) (:r other)
+                       (:max-speed other) (:max-force other) (vm/dist loc bloc)))) boids)))
 
 (defn distance-filter
   [boids l u]
