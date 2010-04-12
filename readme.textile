@@ -14,7 +14,7 @@ This version uses only Clojure vectors to do vector math.
 
 h2. flocking1.clj
 
-This version uses Clojure's new deftype to do vector math. You will need to download the "vecmath":http://github.com/swannodette/vecmath and run "lein install" from your clone in order to run this example.
+This version uses Clojure's new deftype to do vector math. You will need to download the "vecmath":http://github.com/swannodette/vecmath and run "lein install" from your vecmath clone in order to run this example.
 
 Interestingly this version is only slightly faster than flocking0.clj because the vector math is not the real bottleneck.
 
