@@ -13,9 +13,9 @@
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640.0)
 (def *height* 360.0)
-(def *boid-count* 150)
-(def a (agent nil))
-(def b (agent nil))
+(def *boid-count* 300)
+(def *cores* (.. Runtime getRuntime availableProcessors))
+(def aflock (atom nil))
 
 (defn limit [v n]
   (vm/mul (vm/unit v) n))
@@ -28,9 +28,6 @@
    :r         2.0
    :max-speed ms
    :max-force mf})
-
-(defn get-flock []
-  (into [] (concat @a @b)))
 
 (defn bound [n ox dx]
   (let [n  (float n)
@@ -56,9 +53,9 @@
     (p/translate x y)
     (p/rotate theta)
     (p/begin-shape :triangles)
-    (p/vertex 0 (* (- r) 2.0))
-    (p/vertex (- r) (* r 2.0))
-    (p/vertex r (* r 2.0))
+    (p/vertex 0 (* (float (- r)) (float 2.0)))
+    (p/vertex (- r) (* r (float 2.0)))
+    (p/vertex r (* r (float 2.0)))
     (p/end-shape)
     (p/pop-matrix)))
 
@@ -69,34 +66,31 @@
   ([] (make-flock *boid-count*))
   ([n]
    (let [x (/ *width* 2.0)
-         y (/ *height* 2.0)]
-     (let [aflock (into [] (take n (boids x y)))]
-       (when (agent-error a)
-        (clear-agent-errors a))
-       (send a (constantly (subvec aflock 0 (/ n 2))))
-       (when (agent-error b)
-         (clear-agent-errors b))
-       (send b (constantly (subvec aflock (/ n 2) n)))))))
+         y (/ *height* 2.0)
+         m (+ 2 *cores*)]
+     (reset! aflock
+             (into []
+                   (for [i (range m)]
+                     (into []
+                           (for [j (range (int (/ n m)))]
+                             (make-boid (vec2 x y) 2.0 0.05)))))))))
 
 (declare flock-run)
 
 (defn setup []
   (p/smooth)
-  (p/framerate 30)
-  (make-flock)
-  (future (flock-run)))
+  (make-flock))
 
 (defn draw []
   (p/background-int 50)
-  (doseq [boid (get-flock)]
-    (render boid)))
+  (flock-run))
  
 (applet/defapplet flocking3 :title "Flocking 3"
   :setup setup :draw draw :size [*width* *height*])
- 
+
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
   (let [{x :x y :y :as desired} (vm/sub target loc)
-        d                       (float (p/dist (float 0.0) (float 0.0) (float x) (float y)))]
+        d                       (float (p/dist 0.0 0.0 x y))]
     (cond 
      (> d (float 0.0)) (if (and slowdown (< d (float 100.0)))
                          (-> desired
@@ -177,12 +171,14 @@
 (defn boid-run [boid boids]
   (-> (flock boid boids) update borders))
  
-(defn flock-run-all [subflock]
-  (let [flock (get-flock)]
-    (map #(boid-run % flock) subflock)))
+(defn subflock-run [subflock flock]
+  (into [] (map #(boid-run % flock) subflock)))
+
+(defn update-flock [flock current]
+  (into [] (pmap #(subflock-run % current) flock)))
 
 (defn flock-run []
-  (send a flock-run-all)
-  (send b flock-run-all)
-  (await a b)
-  (recur))
+  (let [flock (into [] (apply concat @aflock))]
+    (swap! aflock update-flock flock)
+    (doseq [boid flock]
+      (render boid))))
