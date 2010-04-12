@@ -60,12 +60,12 @@
    :max-force mf})
  
 (defn bound [n ox dx]
-  (let [n  (int n)
-        ox (int ox)
-        dx (int dx)]
+  (let [n  (float n)
+        ox (float ox)
+        dx (float dx)]
    (cond 
-    (< n (- ox))    (+ dx ox)
-    (> n (+ ox dx)) (- ox)
+    (< n (float (- ox)))    (+ dx ox)
+    (> n (float (+ ox dx))) (- ox)
     true n)))
 
 (defn borders [{[x y] :loc, r :r, :as boid}]
