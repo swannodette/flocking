@@ -9,9 +9,14 @@
   (time
    (reset! f0/aflock (doall (f0/flock-run-all @f0/aflock)))))
 
-(f1/make-flock)
-
 ; 10-12ms vs 6ms-8ms in Processing
+(f1/make-flock)
+(dotimes [_ 100]
+  (time
+   (reset! f1/aflock (doall (f1/flock-run-all @f1/aflock)))))
+
+; 110-120ms vs 34-35ms in Processing
+(f1/make-flock 500)
 (dotimes [_ 100]
   (time
    (reset! f1/aflock (doall (f1/flock-run-all @f1/aflock)))))
