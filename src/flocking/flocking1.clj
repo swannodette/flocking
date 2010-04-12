@@ -10,8 +10,8 @@
   clojure.lang.IPersistentMap)
 
 (def #^java.util.Random *rnd* (new java.util.Random))
-(def *width* 640)
-(def *height* 360)
+(def *width* 640.0)
+(def *height* 360.0)
 (def *boid-count* 150)
 (def aflock (atom []))
 
@@ -28,12 +28,12 @@
    :max-force mf})
  
 (defn bound [n ox dx]
-  (let [n  (int n)
-        ox (int ox)
-        dx (int dx)]
+  (let [n  (float n)
+        ox (float ox)
+        dx (float dx)]
    (cond 
-    (< n (int (- ox)))    (+ dx ox)
-    (> n (int (+ ox dx))) (- ox)
+    (< n (float (- ox)))    (+ dx ox)
+    (> n (float (+ ox dx))) (- ox)
     true n)))
 
 (defn borders [{loc :loc, r :r, :as boid}]
