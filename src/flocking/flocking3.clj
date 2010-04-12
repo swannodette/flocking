@@ -1,6 +1,7 @@
 (ns flocking.flocking3
   (:use [vecmath.vec2 :only [vec2 zero sum]]
-        clojure.contrib.pprint)
+        clojure.contrib.pprint
+        flocking.utils)
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
             [vecmath.core :as vm]))
@@ -12,7 +13,7 @@
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640.0)
 (def *height* 360.0)
-(def *boid-count* 500)
+(def *boid-count* 150)
 (def a (agent nil))
 (def b (agent nil))
 
@@ -27,7 +28,7 @@
    :r         2.0
    :max-speed ms
    :max-force mf})
- 
+
 (defn get-flock []
   (into [] (concat @a @b)))
 
@@ -81,8 +82,9 @@
 
 (defn setup []
   (p/smooth)
+  (p/framerate 30)
   (make-flock)
-  (flock-run))
+  (future (flock-run)))
 
 (defn draw []
   (p/background-int 50)
@@ -176,12 +178,11 @@
   (-> (flock boid boids) update borders))
  
 (defn flock-run-all [subflock]
-  (let [flock (get-flock)
-        result (map #(boid-run % flock) subflock)]
-    (. Thread (sleep 10))
-    (send-off *agent* flock-run-all)
-    result))
+  (let [flock (get-flock)]
+    (map #(boid-run % flock) subflock)))
 
 (defn flock-run []
-  (send-off a flock-run-all)
-  (send-off b flock-run-all))
+  (send a flock-run-all)
+  (send b flock-run-all)
+  (await a b)
+  (recur))
