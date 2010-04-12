@@ -1,0 +1,27 @@
+h1. Dan Shiffman's Processing Flocking Sketch in Clojure
+
+This a port of Dan Shiffman's Processing Flocking example ported to idiomatic Clojure. I've included several version here.
+
+In order to see the example you will need to install "Leiningen":http://github.com/technomancy/leiningen. You will also need to build Clojure from source since I use features from Clojure 1.2.
+
+h2. Running the example
+
+Clone this repo and run <code>lein deps</code> from your checkout. This will pull in all the dependencies. You should replace the Clojure jar in the lib directory with the one you compiled from source. You can then run <code>lein swank</code> and connect either Emacs or NetBeans running Enclojure.
+
+h2. flocking0.clj
+
+This version uses only Clojure vectors to do vector math.
+
+h2. flocking1.clj
+
+This version uses Clojure's new deftype to do vector math. You will need to download the "vecmath":http://github.com/swannodette/vecmath and run "lein install" from your clone in order to run this example.
+
+Interestingly this version is only slightly faster than flocking0.clj because the vector math is not the real bottleneck.
+
+h3. flocking2.clj
+
+This version uses an agent for each boid. Not very efficient but an interesting exercise.
+
+h4. flocking3.clj
+
+This version uses two agents and is probably the most efficient implementation. It fully utilizes two cores if you have them.
