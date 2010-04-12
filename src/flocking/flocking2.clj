@@ -6,8 +6,8 @@
             [vecmath.core :as vm]))
 
 (def #^java.util.Random *rnd* (new java.util.Random))
-(def *width* 640)
-(def *height* 360)
+(def *width* 640.0)
+(def *height* 360.0)
 (def *boid-count* 150)
 
 (defn limit [v n]
@@ -24,12 +24,12 @@
     :max-force mf}))
  
 (defn bound [n ox dx]
-  (let [n  (int n)
-        ox (int ox)
-        dx (int dx)]
+  (let [n  (float n)
+        ox (float ox)
+        dx (float dx)]
    (cond 
-    (< n (- ox))    (+ dx ox)
-    (> n (+ ox dx)) (- ox)
+    (< n (float (- ox)))    (+ dx ox)
+    (> n (float (+ ox dx))) (- ox)
     true n)))
 
 (defn borders [{loc :loc, r :r, :as boid}]
@@ -58,10 +58,12 @@
 (defn boids [x y]
   (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
  
-(defn make-flock []
-  (let [x (/ *width* 2.0)
-        y (/ *height* 2.0)]
-   (def aflock (into [] (take *boid-count* (boids x y))))))
+(defn make-flock
+  ([] (make-flock *boid-count*))
+  ([n]
+   (let [x (/ *width* 2.0)
+         y (/ *height* 2.0)]
+     (def aflock (into [] (take n (boids x y)))))))
 
 (declare flock-run)
 
@@ -107,24 +109,26 @@
    (filter (fn [{d :dist}] (let [d (float d)] (and (> d l) (< d u)))) boids)))
 
 (defn separation-map [{loc :loc :as boid} boids]
-  (map (fn [{d :dist oloc :loc}] (-> loc (vm/sub oloc) vm/unit (vm/div d))) boids))
- 
+  (map (fn [other]
+         (let [d (:dist other)
+               oloc (:loc other)]
+          (-> loc (vm/sub oloc) vm/unit (vm/div d))))
+       boids)) 
+
 (defn separation
   [boid boids]
   (let [dsep     25.0
-        filtered (distance-filter boids 0.0 dsep)
-        final    (separation-map boid filtered)]
-    (if-let [sum (reduce sum final)]
-      (vm/div sum (count final))
+        filtered (separation-map boid (distance-filter boids 0.0 dsep))]
+    (if-let [sum (reduce sum filtered)]
+      (vm/div sum (count filtered))
       zero)))
 
 (defn alignment
   [{mf :max-force :as boid} boids]
   (let [nhood    50.0
-        filtered (distance-filter boids 0 nhood)
-        vels     (map :vel filtered)]
-    (if-let [sum (reduce sum vels)]
-      (limit (vm/div sum (count vels)) mf)
+        filtered (map :vel (distance-filter boids 0 nhood))]
+    (if-let [sum (reduce sum filtered)]
+      (limit (vm/div sum (count filtered)) mf)
       zero)))
  
 (defn cohesion
