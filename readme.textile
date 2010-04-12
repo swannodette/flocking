@@ -4,7 +4,7 @@ This a port of Dan Shiffman's Processing Flocking example ported to idiomatic Cl
 
 In order to see the example you will need to install "Leiningen":http://github.com/technomancy/leiningen. You will also need to build Clojure from source since I use features from Clojure 1.2.
 
-h2. Running the example
+h2. Running the examples
 
 Clone this repo and run <code>lein deps</code> from your checkout. This will pull in all the dependencies. You should replace the Clojure jar in the lib directory with the one you compiled from source. You can then run <code>lein swank</code> and connect either Emacs or NetBeans running Enclojure.
 
