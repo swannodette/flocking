@@ -98,8 +98,15 @@
 (defn distance-map
   [boid boids]
   (let [bloc (:loc boid)]
-    (map (fn [{:keys [loc vel acc r max-speed max-force] :as other}]
-           (dist-boid loc vel acc r max-speed max-force (vm/dist loc bloc))) boids)))
+    (map (fn [other]
+           (let [loc (:loc other)]
+            (dist-boid loc
+                       (:vel other)
+                       (:acc other)
+                       (:r other)
+                       (:max-speed other)
+                       (:max-force other)
+                       (vm/dist loc bloc)))) boids)))
 
 (defn distance-filter
   [boids l u]
@@ -161,43 +168,3 @@
   (swap! aflock flock-run-all)
   (doseq [boid @aflock]
     (render boid)))
-
-(comment
-  (make-flock)
-
-  ; 10-12ms
-  (dotimes [_ 100]
-    (time
-     (reset! aflock (doall (flock-run-all @aflock)))))
-
-  ; 1.1ms
-  (dotimes [_ 100]
-    (let [b  (nth @aflock 0)
-          bs (distance-map b @aflock)]
-     (time
-      (doseq [b bs]
-        (separation b bs)))))
-
-  ; 1.1ms
-  (dotimes [_ 100]
-    (let [b  (nth @aflock 0)
-          bs (distance-map b @aflock)]
-     (time
-      (doseq [b bs]
-        (alignment b bs)))))
-
-  ; 1.1ms
-  (dotimes [_ 100]
-    (let [b  (nth @aflock 0)
-          bs (distance-map b @aflock)]
-     (time
-      (doseq [b bs]
-        (cohesion b bs)))))
-
-  ; 7ms
-  (dotimes [_ 100]
-    (let [bs @aflock]
-     (time
-      (doseq [b bs]
-        (doall (distance-map b bs))))))
-  )
