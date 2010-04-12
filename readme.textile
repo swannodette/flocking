@@ -18,10 +18,10 @@ This version uses Clojure's new deftype to do vector math. You will need to down
 
 Interestingly this version is only slightly faster than flocking0.clj because the vector math is not the real bottleneck.
 
-h3. flocking2.clj
+h2. flocking2.clj
 
 This version uses an agent for each boid. Not very efficient but an interesting exercise.
 
-h4. flocking3.clj
+h2. flocking3.clj
 
 This version uses two agents and is probably the most efficient implementation. It fully utilizes two cores if you have them.
