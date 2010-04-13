@@ -1,8 +1,8 @@
 h1. Dan Shiffman's Processing Flocking Sketch in Clojure
 
-This a port of Dan Shiffman's Processing Flocking example ported to idiomatic Clojure. I've included several version here.
+This a port of Dan Shiffman's Processing Flocking example ported to idiomatic Clojure. I've included several versions here.
 
-In order to see the example you will need to install "Leiningen":http://github.com/technomancy/leiningen. You will also need to build Clojure from source since I use features from Clojure 1.2.
+In order to see the examples you will need to install "Leiningen":http://github.com/technomancy/leiningen. You will also need to build Clojure from source since I use features from Clojure 1.2.
 
 h2. Running the examples
 
@@ -67,8 +67,8 @@ PVector separate (ArrayList boids) {
 
 h2. flocking4.clj
 
-This version uses two agents and is mostly interesting. Because the drawing thread and update thread are completely seperate you see pauses.
+This version uses two agents and is mostly a curious approach. Because the drawing thread and update thread are completely seperate you sometimes see pauses.
 
 h2. flocking_old.clj
 
-This is a very old version that I did more than a year ago when I didn't know that much about Clojure. It's quite verbose an full of naive attempts optimization (loop/recure, type hints). As flocking1.clj shows you can get really, really good performance out of Clojure without any of that. flocking3.clj shows that it's easy to safely distribute work safely across cores and withenough cores you could outpace the single threaded version.
+This is a very old version that I did more than a year ago when I didn't know that much about Clojure. It's quite verbose and full of naive attempts at optimization (loop/recur, type hints, Java arrays). As flocking3.clj shows you can get really, really good performance out of Clojure without any of that. flocking3.clj shows that it's easy to safely distribute work safely across cores and with enough cores you could probably beat the single threaded mutable Java version.
