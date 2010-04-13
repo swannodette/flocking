@@ -10,12 +10,20 @@
   [loc vel acc r max-speed max-force dist]
   clojure.lang.IPersistentMap)
 
+;; =============================================================================
+;; Top-level values
+;; =============================================================================
+
 (def #^java.util.Random *rnd* (new java.util.Random))
 (def *width* 640.0)
 (def *height* 360.0)
 (def *boid-count* 150)
 (def *cores* (.. Runtime getRuntime availableProcessors))
 (def aflock (atom nil))
+
+;; =============================================================================
+;; Utilities
+;; =============================================================================
 
 (defn limit [v n]
   (vm/mul (vm/unit v) n))
@@ -41,27 +49,6 @@
 (defn borders [{loc :loc, r :r, :as boid}]
   (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
-(defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
-  (let [dx (float dx)
-        dy (float dy)
-        r  (float r)
-        theta (float (+ (float (p/atan2 dy dx))
-                        (float (/ (float Math/PI) (float 2.0)))))]
-    (p/fill-float 200 100)
-    (p/stroke-int 255)
-    (p/push-matrix)
-    (p/translate x y)
-    (p/rotate theta)
-    (p/begin-shape :triangles)
-    (p/vertex 0 (* (float (- r)) (float 2.0)))
-    (p/vertex (- r) (* r (float 2.0)))
-    (p/vertex r (* r (float 2.0)))
-    (p/end-shape)
-    (p/pop-matrix)))
-
-(defn boids [x y]
-  (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
- 
 (defn make-flock
   ([] (make-flock *boid-count*))
   ([n]
@@ -75,18 +62,9 @@
                            (for [j (range (int (/ n m)))]
                              (make-boid (vec2 x y) 2.0 0.05)))))))))
 
-(declare flock-run)
-
-(defn setup []
-  (p/smooth)
-  (make-flock))
-
-(defn draw []
-  (p/background-int 50)
-  (flock-run))
- 
-(applet/defapplet flocking3 :title "Flocking 3"
-  :setup setup :draw draw :size [*width* *height*])
+;; =============================================================================
+;; Flocking
+;; =============================================================================
 
 (defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
   (let [{x :x y :y :as desired} (vm/sub target loc)
@@ -167,8 +145,43 @@
 (defn update-flock [flock current]
   (into [] (pmap #(subflock-run % current) flock)))
 
+(declare render)
+
 (defn flock-run []
   (let [flock (into [] (apply concat @aflock))]
     (swap! aflock update-flock flock)
     (doseq [boid flock]
       (render boid))))
+
+;; =============================================================================
+;; Applet
+;; =============================================================================
+
+(defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
+  (let [dx (float dx)
+        dy (float dy)
+        r  (float r)
+        theta (float (+ (float (p/atan2 dy dx))
+                        (float (/ (float Math/PI) (float 2.0)))))]
+    (p/fill-float 200 100)
+    (p/stroke-int 255)
+    (p/push-matrix)
+    (p/translate x y)
+    (p/rotate theta)
+    (p/begin-shape :triangles)
+    (p/vertex 0 (* (float (- r)) (float 2.0)))
+    (p/vertex (- r) (* r (float 2.0)))
+    (p/vertex r (* r (float 2.0)))
+    (p/end-shape)
+    (p/pop-matrix)))
+
+(defn setup []
+  (p/smooth)
+  (make-flock))
+
+(defn draw []
+  (p/background-int 50)
+  (flock-run))
+ 
+(applet/defapplet flocking3 :title "Flocking 3"
+  :setup setup :draw draw :size [*width* *height*])
