@@ -1,14 +1,14 @@
 (ns flocking.flocking3
-  (:use [vecmath.vec2 :only [vec2 zero sum]]
+  (:use [net.dnolen.vecmath.utils :only [sum]]
+        [net.dnolen.vecmath.Vector2d :only [zero]]
         clojure.contrib.pprint
         flocking.utils)
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
-            [vecmath.core :as vm]))
+            [net.dnolen.vecmath.core :as vm])
+  (:import [net.dnolen.vecmath.Vector2d Vector2d]))
 
-(deftype dist-boid
-  [loc vel acc r max-speed max-force dist]
-  clojure.lang.IPersistentMap)
+(defrecord DistBoid [loc vel acc r max-speed max-force dist])
 
 ;; =============================================================================
 ;; Top-level values
@@ -30,9 +30,9 @@
 
 (defn make-boid [loc ms mf]
   {:loc       loc
-   :vel       (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
-                    (+ (* (.nextFloat *rnd*) 2) -1))
-   :acc       (vec2 0 0)
+   :vel       (Vector2d. (+ (* (.nextFloat *rnd*) 2) -1)
+                         (+ (* (.nextFloat *rnd*) 2) -1))
+   :acc       (Vector2d. 0 0)
    :r         2.0
    :max-speed ms
    :max-force mf})
@@ -47,7 +47,7 @@
     true n)))
 
 (defn borders [{loc :loc, r :r, :as boid}]
-  (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
+  (assoc boid :loc (Vector2d. (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
 (defn make-flock
   ([] (make-flock *boid-count*))
@@ -60,7 +60,7 @@
                    (for [i (range m)]
                      (into []
                            (for [j (range (int (/ n m)))]
-                             (make-boid (vec2 x y) 2.0 0.05)))))))))
+                             (make-boid (Vector2d. x y) 2.0 0.05)))))))))
 
 ;; =============================================================================
 ;; Flocking
@@ -83,7 +83,7 @@
   (let [bloc (:loc boid)]
     (map (fn [other]
            (let [loc (:loc other)]
-            (dist-boid loc (:vel other) (:acc other) (:r other)
+            (DistBoid. loc (:vel other) (:acc other) (:r other)
                        (:max-speed other) (:max-force other) (vm/dist loc bloc)))) boids)))
 
 (defn distance-filter

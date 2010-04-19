@@ -1,9 +1,11 @@
 (ns flocking.flocking1
-  (:use [vecmath.vec2 :only [vec2 zero sum]]
+  (:use [net.dnolen.vecmath.utils :only [sum]]
+        [net.dnolen.vecmath.Vector2d :only [zero]]
         clojure.contrib.pprint)
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]
-            [vecmath.core :as vm]))
+            [vecmath.core :as vm])
+  (:import [net.dnolen.vecmath.Vector2d Vector2d]))
 
 (deftype dist-boid
   [loc vel acc r max-speed max-force dist]
@@ -20,9 +22,9 @@
 
 (defn make-boid [loc ms mf]
   {:loc       loc
-   :vel       (vec2 (+ (* (.nextFloat *rnd*) 2) -1)
-                    (+ (* (.nextFloat *rnd*) 2) -1))
-   :acc       (vec2 0 0)
+   :vel       (Vector2d. (+ (* (.nextFloat *rnd*) 2) -1)
+                         (+ (* (.nextFloat *rnd*) 2) -1))
+   :acc       (Vector2d. 0 0)
    :r         2.0
    :max-speed ms
    :max-force mf})
@@ -37,7 +39,7 @@
     true n)))
 
 (defn borders [{loc :loc, r :r, :as boid}]
-  (assoc boid :loc (vec2 (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
+  (assoc boid :loc (Vector2d. (bound (:x loc) r *width*) (bound (:y loc) r *height*))))
  
 (defn render [{{dx :x dy :y} :vel, {x :x y :y} :loc, r :r, :as boid}]
   (let [dx (float dx)
@@ -58,7 +60,7 @@
     (p/pop-matrix)))
 
 (defn boids [x y]
-  (repeatedly #(make-boid (vec2 x y) 2.0 0.05)))
+  (repeatedly #(make-boid (Vector2d. x y) 2.0 0.05)))
  
 (defn make-flock
   ([] (make-flock *boid-count*))
