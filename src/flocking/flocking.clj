@@ -3,6 +3,7 @@
             [rosado.processing.applet :as applet]))
 
 (set! *unchecked-math* true)
+(set! *warn-on-reflection* true)
 
 (defprotocol IVecMath2d
   (add [this other])
@@ -53,7 +54,7 @@
 (def ^java.util.Random rnd (new java.util.Random))
 (def ^:constant width 640.0)
 (def ^:constant height 360.0)
-(def ^:constant boid-count 150)
+(def ^:constant boid-count 500)
 (def ^:constant cores (.. Runtime getRuntime availableProcessors))
 (def aflock (atom nil))
 
@@ -61,21 +62,21 @@
 ;; Utilities
 ;; =============================================================================
 
-(defn limit [v n]
+(defn limit [v ^double n]
   (mul (unit v) n))
 
 (defn make-boid [loc ms mf]
   {:loc loc
-   :vel (Vec2d. (+ (* (.nextDouble rnd) 2) -1)
-                (+ (* (.nextDouble rnd) 2) -1))
-   :acc (Vec2d. 0 0)
+   :vel (Vec2d. (+ (* (.nextDouble rnd) 2.0) -1.0)
+                (+ (* (.nextDouble rnd) 2.0) -1.0))
+   :acc (Vec2d. 0.0 0.0)
    :r 2.0
    :max-speed ms
    :max-force mf})
 
 (defn bound ^double [^double n ^double ox ^double dx]
   (cond 
-   (< n (- ox))    (+ dx ox)
+   (< n (- ox)) (+ dx ox)
    (> n (+ ox dx)) (- ox)
    true n))
 
@@ -131,26 +132,26 @@
 
 (defn separation
   [boid boids]
-  (let [dsep     25.0
+  (let [dsep 25.0
         filtered (separation-map boid (distance-filter boids 0.0 dsep))]
-    (if-let [sum (reduce sum filtered)]
-      (div sum (count filtered))
-      zero)))
+    (reduce sum filtered)))
 
 (defn alignment
   [{mf :max-force :as boid} boids]
-  (let [nhood    50.0
+  (let [nhood 50.0
         filtered (map :vel (distance-filter boids 0.0 nhood))]
-    (if-let [sum (reduce sum filtered)]
-      (limit (div sum (count filtered)) mf)
-      zero)))
+    (let [sum (reduce sum filtered)]
+      (if (not (identical? sum zero))
+       (limit (div sum (count filtered)) mf)
+       sum))))
 
 (defn cohesion [boid boids]
   (let [nhood 50.0
         filtered (map :loc (distance-filter boids 0.0 nhood))]
-    (if-let [sum (reduce sum filtered)]
-      (steer boid (div sum (count filtered)) false)
-      zero)))
+    (let [sum (reduce sum filtered)]
+      (if (not (identical? sum zero))
+       (steer boid (div sum (count filtered)) false)
+       zero))))
 
 (defn flock [{acc :acc, :as boid} boids]
   (let [mboids (distance-map boid boids)

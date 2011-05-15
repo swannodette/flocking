@@ -50,3 +50,21 @@
    (time
     (doseq [b flock]
       (doall (distance-map b flock))))))
+
+(comment
+  (let [b  (get-in @aflock [0 0])
+        bs (distance-map b (whole-flock))]
+    (separation b bs))
+
+  (let [b  (get-in @aflock [0 0])
+        bs (distance-map b (whole-flock))]
+    (cohesion b bs))
+
+  (let [b  (get-in @aflock [0 0])
+        bs (distance-map b (whole-flock))]
+    (alignment b bs))
+
+  (let [b  (get-in @aflock [0 0])
+        bs (distance-map b (whole-flock))]
+    (map :vel (distance-filter bs 0.0 50.0)))
+  )
