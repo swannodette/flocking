@@ -54,7 +54,7 @@
 (def ^java.util.Random rnd (new java.util.Random))
 (def ^:constant width 640.0)
 (def ^:constant height 360.0)
-(def ^:constant boid-count 500)
+(def ^:constant boid-count 150)
 (def ^:constant cores (.. Runtime getRuntime availableProcessors))
 (def aflock (atom nil))
 
@@ -65,14 +65,16 @@
 (defn limit [v ^double n]
   (mul (unit v) n))
 
-(defn make-boid [loc ms mf]
-  {:loc loc
-   :vel (Vec2d. (+ (* (.nextDouble rnd) 2.0) -1.0)
-                (+ (* (.nextDouble rnd) 2.0) -1.0))
-   :acc (Vec2d. 0.0 0.0)
-   :r 2.0
-   :max-speed ms
-   :max-force mf})
+(defrecord Boid [loc vel acc r max-speed max-force])
+
+(defn ^Boid make-boid [loc ms mf]
+  (Boid. loc
+         (Vec2d. (+ (* (.nextDouble rnd) 2.0) -1.0)
+                 (+ (* (.nextDouble rnd) 2.0) -1.0))
+         (Vec2d. 0.0 0.0)
+         2.0
+         ms
+         mf))
 
 (defn bound ^double [^double n ^double ox ^double dx]
   (cond 
@@ -100,7 +102,7 @@
 ;; Flocking
 ;; =============================================================================
 
-(defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc, :as boid} target slowdown]
+(defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc} target slowdown]
   (let [ms (double ms)
         mf (double mf)
         desired (sub target loc)
@@ -112,22 +114,19 @@
                        (-> unit (mul ms)))
                      (sub vel)
                      (limit mf)))
-     true zero)))
+     :else zero)))
 
 (defn distance-map [boid boids]
   (let [bloc (:loc boid)]
-    (map (fn [other]
-           (let [loc (:loc other)]
-             (assoc other :dist (length (sub loc bloc))))) boids)))
+    (map (fn [{loc :loc}]
+           (assoc other :dist (length (sub loc bloc)))) boids)))
 
 (defn distance-filter [boids ^double l ^double u]
   (filter (fn [other] (let [d (:dist other)] (and (> d l) (< d u)))) boids))
 
 (defn separation-map [{loc :loc :as boid} boids]
-  (map (fn [other]
-         (let [d (:dist other)
-               oloc (:loc other)]
-           (-> loc (sub oloc) unit (div d))))
+  (map (fn [{d :dist oloc :loc}]
+         (-> loc (sub oloc) unit (div d)))
        boids))
 
 (defn separation
@@ -142,8 +141,8 @@
         filtered (map :vel (distance-filter boids 0.0 nhood))]
     (let [sum (reduce sum filtered)]
       (if (not (identical? sum zero))
-       (limit (div sum (count filtered)) mf)
-       sum))))
+        (limit (div sum (count filtered)) mf)
+        sum))))
 
 (defn cohesion [boid boids]
   (let [nhood 50.0
@@ -182,6 +181,7 @@
   (let [flock (into [] (apply concat @aflock))]
     (update-flock @aflock flock)))
 
+;; for testing purposes
 (defn whole-flock []
   (into [] (apply concat @aflock)))
 
