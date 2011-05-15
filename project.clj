@@ -1,7 +1,5 @@
 (defproject flocking "1.0.0-SNAPSHOT"
   :description "Dan Shiffman's flocking code in Clojure"
-  :dependencies [[org.clojure/clojure "1.2.0-master-SNAPSHOT"]
-                 [org.clojure/clojure-contrib "1.2.0-master-SNAPSHOT"]
-                 [org.clojars.fyuryu/rosado.processing "1.0.7"]
-                 [net.dnolen.vecmath "0.1.0-SNAPSHOT"]]
-  :dev-dependencies [[leiningen/lein-swank "1.2.0-SNAPSHOT"]])
+  :dependencies [[org.clojure/clojure "1.3.0-alpha7"]
+                 [org.clojars.automata/rosado.processing "1.1.0"]]
+  :dev-dependencies [[swank-clojure "1.3.0"]])

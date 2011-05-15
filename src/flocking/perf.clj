@@ -1,53 +1,46 @@
 (ns flocking.perf
-  (:require [flocking.flocking1 :as f0]
-            [flocking.flocking1 :as f1]))
+  (:use [flocking.flocking]))
 
-(f0/make-flock)
+(make-flock)
 
 ; 10-12ms vs 6ms-8ms in Processing
 (dotimes [_ 100]
   (time
-   (reset! f0/aflock (doall (f0/flock-run-all @f0/aflock)))))
-
-; 10-12ms vs 6ms-8ms in Processing
-(f1/make-flock)
-(dotimes [_ 100]
-  (time
-   (reset! f1/aflock (doall (f1/flock-run-all @f1/aflock)))))
+   (reset! aflock (doall (flock-run-all @aflock)))))
 
 ; 110-120ms vs 34-35ms in Processing
-(f1/make-flock 500)
+(make-flock 500)
 (dotimes [_ 100]
   (time
-   (reset! f1/aflock (doall (f1/flock-run-all @f1/aflock)))))
+   (reset! aflock (doall (flock-run-all @aflock)))))
 
 ; 1.1ms
 (dotimes [_ 100]
-  (let [b  (nth @f1/aflock 0)
-        bs (f1/distance-map b @f1/aflock)]
+  (let [b  (nth @aflock 0)
+        bs (distance-map b @aflock)]
    (time
     (doseq [b bs]
-      (f1/separation b bs)))))
+      (separation b bs)))))
 
 ; 1.1ms
 (dotimes [_ 100]
-  (let [b  (nth @f1/aflock 0)
-        bs (f1/distance-map b @f1/aflock)]
+  (let [b  (nth @aflock 0)
+        bs (distance-map b @aflock)]
    (time
     (doseq [b bs]
-      (f1/alignment b bs)))))
+      (alignment b bs)))))
 
 ; 1.1ms
 (dotimes [_ 100]
-  (let [b  (nth @f1/aflock 0)
-        bs (f1/distance-map b @f1/aflock)]
+  (let [b  (nth @aflock 0)
+        bs (distance-map b @aflock)]
    (time
     (doseq [b bs]
-      (f1/cohesion b bs)))))
+      (cohesion b bs)))))
 
 ; 7ms
 (dotimes [_ 100]
-  (let [bs @f1/aflock]
+  (let [bs @aflock]
    (time
     (doseq [b bs]
-      (doall (f1/distance-map b bs))))))
+      (doall (distance-map b bs))))))
