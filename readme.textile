@@ -1,30 +1,6 @@
 h1. Dan Shiffman's Processing Flocking Sketch in Clojure
 
-This a port of Dan Shiffman's Processing Flocking example ported to idiomatic Clojure. I've included several versions here.
-
-In order to see the examples you will need to install "Leiningen":http://github.com/technomancy/leiningen. You will also need to build Clojure from source since I use features from Clojure 1.2.
-
-h2. Running the examples
-
-Clone this repo and run <code>lein deps</code> from your checkout. This will pull in all the dependencies. You should replace the Clojure jar in the lib directory with the one you compiled from source. You can then run <code>lein swank</code> and connect either Emacs or NetBeans running Enclojure.
-
-h2. flocking0.clj
-
-This version uses only Clojure vectors to do vector math.
-
-h2. flocking1.clj
-
-This version uses Clojure's new deftype to do vector math. You will need to download the "vecmath":http://github.com/swannodette/vecmath and run "lein install" from your vecmath clone in order to run this example.
-
-Interestingly this version is only slightly faster than flocking0.clj because the vector math is not the real bottleneck.
-
-h2. flocking2.clj
-
-This version uses an agent for each boid. Not very efficient but an interesting exercise.
-
-h2. flocking3.clj
-
-This version uses pmap. This version provides the best performance as well as "look". With 2 cores this version is between 1.6X-2X the speed of Java and you don't see stuttering as you do in the following version. This is impressive considering the fact that this version is functional, performant, and parallel and yet shorter than the Java version!
+This a port of Dan Shiffman's Processing Flocking example ported to Clojure.
 
 <pre class="code">
 (defn separation
@@ -64,11 +40,3 @@ PVector separate (ArrayList boids) {
   return sum;
 }
 </pre>
-
-h2. flocking4.clj
-
-This version uses two agents and is mostly a curious approach. Because the drawing thread and update thread are completely seperate you sometimes see pauses.
-
-h2. flocking_old.clj
-
-This is a very old version that I did more than a year ago when I didn't know that much about Clojure. It's quite verbose and full of naive attempts at optimization (loop/recur, type hints, Java arrays). As flocking3.clj shows you can get really, really good performance out of Clojure without any of that. flocking3.clj shows that it's easy to safely distribute work safely across cores and with enough cores you could probably beat the single threaded mutable Java version.

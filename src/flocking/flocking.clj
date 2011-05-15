@@ -42,8 +42,9 @@
 
 (def ^Vec2d zero (Vec2d. 0.0 0.0))
 
-(defn ^Vec2d sum [v1 v2]
-  (add v1 v2))
+(defn ^Vec2d sum
+  ([] zero)
+  ([v1 v2] (add v1 v2)))
 
 ;; =============================================================================
 ;; Top-level values
@@ -177,6 +178,14 @@
   (into [] (pmap #(subflock-run % current) flock)))
 
 (declare render)
+
+;; for testing purposes
+(defn flock-run-all []
+  (let [flock (into [] (apply concat @aflock))]
+    (update-flock @aflock flock)))
+
+(defn whole-flock []
+  (into [] (apply concat @aflock)))
 
 (defn flock-run []
   (let [flock (into [] (apply concat @aflock))]
