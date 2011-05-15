@@ -113,15 +113,13 @@
                      (limit mf)))
      true zero)))
 
-(defn distance-map
-  [boid boids]
+(defn distance-map [boid boids]
   (let [bloc (:loc boid)]
     (map (fn [other]
            (let [loc (:loc other)]
              (assoc other :dist (length (sub loc bloc))))) boids)))
 
-(defn distance-filter
-  [boids ^double l ^double u]
+(defn distance-filter [boids ^double l ^double u]
   (filter (fn [other] (let [d (:dist other)] (and (> d l) (< d u)))) boids))
 
 (defn separation-map [{loc :loc :as boid} boids]
@@ -147,9 +145,8 @@
       (limit (div sum (count filtered)) mf)
       zero)))
 
-(defn cohesion
-  [boid boids]
-  (let [nhood    50.0
+(defn cohesion [boid boids]
+  (let [nhood 50.0
         filtered (map :loc (distance-filter boids 0.0 nhood))]
     (if-let [sum (reduce sum filtered)]
       (steer boid (div sum (count filtered)) false)
@@ -157,9 +154,9 @@
 
 (defn flock [{acc :acc, :as boid} boids]
   (let [mboids (distance-map boid boids)
-        sep    (-> (separation boid mboids) (mul 2.0))
-        ali    (-> (alignment boid mboids) (mul 1.0))
-        coh    (-> (cohesion boid mboids) (mul 1.0))]
+        sep (-> (separation boid mboids) (mul 2.0))
+        ali (-> (alignment boid mboids) (mul 1.0))
+        coh (-> (cohesion boid mboids) (mul 1.0))]
     (assoc boid :acc (-> acc (add sep) (add ali) (add coh)))))
 
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
