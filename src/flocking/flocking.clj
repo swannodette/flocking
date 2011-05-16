@@ -58,7 +58,7 @@
 (def ^java.util.Random rnd (new java.util.Random))
 (def ^:constant width 640.0)
 (def ^:constant height 360.0)
-(def ^:constant boid-count 500)
+(def ^:constant boid-count 150)
 (def ^:constant cores (.. Runtime getRuntime availableProcessors))
 (def aflock (atom nil))
 
@@ -69,15 +69,6 @@
 (defn limit [v ^double n]
   (mul (unit v) n))
 
-(comment
-  (defprotocol IBoid
-    (steer [this target slowdown])
-    (cohere [this flock])
-    (separate [this flock])
-    (align [this flock])
-    (update [this]))
-  )
-
 (defn bound ^double [^double n ^double ox ^double dx]
   (cond 
    (< n (- ox)) (+ dx ox)
@@ -87,13 +78,22 @@
 (defprotocol IBoid
   (steer [this target slowdown])
   (borders [this])
+  (alignment [this flock])
   (update [this])
   (flock [this flock]))
 
+(declare distance-filter)
 (declare distance-map)
-(declare seperation)
-(declare alignment)
+(declare separation)
 (declare cohesion)
+
+(defrecord DistBoid [^Vec2d loc
+                     ^Vec2d vel
+                     ^Vec2d acc
+                     ^double r
+                     ^double max-speed
+                     ^double max-force
+                     ^double dist])
 
 (defrecord Boid [^Vec2d loc
                  ^Vec2d vel
@@ -117,25 +117,24 @@
             :else zero)))
   (borders [this]
            (assoc this :loc (Vec2d. (bound (.x loc) r width) (bound (.y loc) r height))))
+  (alignment [_ flock]
+             (let [nhood 50.0
+                   filtered (map #(.vel ^DistBoid %) (distance-filter flock 0.0 nhood))]
+               (let [sum (reduce sum filtered)]
+                 (if (not (zero? sum))
+                   (limit (div sum (count filtered)) max-force)
+                   sum))))
   (update [this]
           (assoc this
             :vel (limit (add vel acc) max-speed)
             :loc (add loc vel)
             :acc (mul acc 0.0)))
-  (flock [this boids]
-         (let [mboids (distance-map this boids)
+  (flock [this flock]
+         (let [mboids (distance-map this flock)
                sep (-> (separation this mboids) (mul 2.0))
                ali (-> (alignment this mboids) (mul 1.0))
                coh (-> (cohesion this mboids) (mul 1.0))]
            (assoc this :acc (-> acc (add sep) (add ali) (add coh))))))
-
-(defrecord DistBoid [^Vec2d loc
-                     ^Vec2d vel
-                     ^Vec2d acc
-                     ^double r
-                     ^double max-speed
-                     ^double max-force
-                     ^double dist])
 
 (defn ^Boid make-boid [loc ms mf]
   (Boid. loc
@@ -192,18 +191,8 @@
         (div sum (count filtered))
         sum))))
 
-(defn alignment
-  [{mf :max-force :as boid} boids]
-  (let [mf (double mf)
-        nhood 50.0
-        filtered (map #(.vel ^DistBoid %) (distance-filter boids 0.0 nhood))]
-    (let [sum (reduce sum filtered)]
-      (if (not (zero? sum))
-        (limit (div sum (count filtered)) mf)
-        sum))))
-
 (defn cohesion [boid boids]
-  (let [nhood 50.0
+  (let [nhood 25.0
         filtered (map #(.loc ^DistBoid %) (distance-filter boids 0.0 nhood))]
     (let [sum (reduce sum filtered)]
       (if (not (zero? sum))
