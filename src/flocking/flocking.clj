@@ -1,4 +1,5 @@
 (ns flocking.flocking
+  (:refer-clojure :exclude [zero?])
   (:require [rosado.processing :as p]
             [rosado.processing.applet :as applet]))
 
@@ -39,13 +40,16 @@
   (Vec2d. (* (.x v) scalar) (* (.y v) scalar)))
 
 (defn ^Vec2d div [^Vec2d v ^double scalar]
-  (Vec2d. (* (.x v) scalar) (* (.y v) scalar)))
+  (Vec2d. (/ (.x v) scalar) (/ (.y v) scalar)))
 
 (def ^Vec2d zero (Vec2d. 0.0 0.0))
 
 (defn ^Vec2d sum
   ([] zero)
   ([v1 v2] (add v1 v2)))
+
+(defn zero? [v]
+  (identical? v zero))
 
 ;; =============================================================================
 ;; Top-level values
@@ -54,7 +58,7 @@
 (def ^java.util.Random rnd (new java.util.Random))
 (def ^:constant width 640.0)
 (def ^:constant height 360.0)
-(def ^:constant boid-count 150)
+(def ^:constant boid-count 500)
 (def ^:constant cores (.. Runtime getRuntime availableProcessors))
 (def aflock (atom nil))
 
@@ -65,16 +69,45 @@
 (defn limit [v ^double n]
   (mul (unit v) n))
 
-(defrecord Boid [loc vel acc r max-speed max-force])
+(comment
+  (defprotocol IBoid
+    (steer [this target slowdown])
+    (cohere [this flock])
+    (separate [this flock])
+    (align [this flock])
+    (update [this]))
+  )
+
+(defprotocol IBoid
+  (steer [this target slowdown]))
+
+(defrecord Boid [^Vec2d loc
+                 ^Vec2d vel
+                 ^Vec2d acc
+                 ^double r
+                 ^double max-speed
+                 ^double max-force]
+  IBoid
+  (steer [_ target slowdown]
+         (let [ms max-speed
+               mf max-force
+               desired (sub target loc)
+               d (length desired)]
+           (cond 
+            (> d 0.0) (let [unit (unit desired)]
+                        (-> (if (and slowdown (< d 100.0))
+                              (-> unit (mul (* ms (/ d 100.0))))
+                              (-> unit (mul ms)))
+                            (sub vel)
+                            (limit mf)))
+            :else zero))))
 
 (defn ^Boid make-boid [loc ms mf]
   (Boid. loc
          (Vec2d. (+ (* (.nextDouble rnd) 2.0) -1.0)
                  (+ (* (.nextDouble rnd) 2.0) -1.0))
          (Vec2d. 0.0 0.0)
-         2.0
-         ms
-         mf))
+         2.0 ms mf))
 
 (defn bound ^double [^double n ^double ox ^double dx]
   (cond 
@@ -102,24 +135,9 @@
 ;; Flocking
 ;; =============================================================================
 
-(defn steer [{ms :max-speed, mf :max-force, vel :vel, loc :loc} target slowdown]
-  (let [ms (double ms)
-        mf (double mf)
-        desired (sub target loc)
-        d (length desired)]
-    (cond 
-     (> d 0.0) (let [unit (unit desired)]
-                 (-> (if (and slowdown (< d 100.0))
-                       (-> unit (mul (* ms (/ d 100.0))))
-                       (-> unit (mul ms)))
-                     (sub vel)
-                     (limit mf)))
-     :else zero)))
-
-(defn distance-map [boid boids]
-  (let [bloc (:loc boid)]
-    (map (fn [{loc :loc}]
-           (assoc other :dist (length (sub loc bloc)))) boids)))
+(defn distance-map [{bloc :loc} boids]
+  (map (fn [{loc :loc :as other}]
+         (assoc other :dist (length (sub loc bloc)))) boids))
 
 (defn distance-filter [boids ^double l ^double u]
   (filter (fn [other] (let [d (:dist other)] (and (> d l) (< d u)))) boids))
@@ -133,14 +151,18 @@
   [boid boids]
   (let [dsep 25.0
         filtered (separation-map boid (distance-filter boids 0.0 dsep))]
-    (reduce sum filtered)))
+    (let [sum (reduce sum filtered)]
+      (if (not (zero? sum))
+        (div sum (count filtered))
+        sum))))
 
 (defn alignment
   [{mf :max-force :as boid} boids]
-  (let [nhood 50.0
+  (let [mf (double mf)
+        nhood 50.0
         filtered (map :vel (distance-filter boids 0.0 nhood))]
     (let [sum (reduce sum filtered)]
-      (if (not (identical? sum zero))
+      (if (not (zero? sum))
         (limit (div sum (count filtered)) mf)
         sum))))
 
@@ -148,9 +170,9 @@
   (let [nhood 50.0
         filtered (map :loc (distance-filter boids 0.0 nhood))]
     (let [sum (reduce sum filtered)]
-      (if (not (identical? sum zero))
+      (if (not (zero? sum))
        (steer boid (div sum (count filtered)) false)
-       zero))))
+       sum))))
 
 (defn flock [{acc :acc, :as boid} boids]
   (let [mboids (distance-map boid boids)
@@ -160,10 +182,11 @@
     (assoc boid :acc (-> acc (add sep) (add ali) (add coh)))))
 
 (defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
-  (assoc boid 
-    :vel (limit (add vel acc) ms)
-    :loc (add loc vel)
-    :acc (mul acc 0.0)))
+  (let [ms (double ms)]
+   (assoc boid 
+     :vel (limit (add vel acc) ms)
+     :loc (add loc vel)
+     :acc (mul acc 0.0))))
 
 (defn boid-run [boid boids]
   (-> (flock boid boids) update borders))
