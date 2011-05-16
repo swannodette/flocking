@@ -78,8 +78,22 @@
     (update [this]))
   )
 
+(defn bound ^double [^double n ^double ox ^double dx]
+  (cond 
+   (< n (- ox)) (+ dx ox)
+   (> n (+ ox dx)) (- ox)
+   true n))
+
 (defprotocol IBoid
-  (steer [this target slowdown]))
+  (steer [this target slowdown])
+  (borders [this])
+  (update [this])
+  (flock [this flock]))
+
+(declare distance-map)
+(declare seperation)
+(declare alignment)
+(declare cohesion)
 
 (defrecord Boid [^Vec2d loc
                  ^Vec2d vel
@@ -100,7 +114,28 @@
                               (-> unit (mul ms)))
                             (sub vel)
                             (limit mf)))
-            :else zero))))
+            :else zero)))
+  (borders [this]
+           (assoc this :loc (Vec2d. (bound (.x loc) r width) (bound (.y loc) r height))))
+  (update [this]
+          (assoc this
+            :vel (limit (add vel acc) max-speed)
+            :loc (add loc vel)
+            :acc (mul acc 0.0)))
+  (flock [this boids]
+         (let [mboids (distance-map this boids)
+               sep (-> (separation this mboids) (mul 2.0))
+               ali (-> (alignment this mboids) (mul 1.0))
+               coh (-> (cohesion this mboids) (mul 1.0))]
+           (assoc this :acc (-> acc (add sep) (add ali) (add coh))))))
+
+(defrecord DistBoid [^Vec2d loc
+                     ^Vec2d vel
+                     ^Vec2d acc
+                     ^double r
+                     ^double max-speed
+                     ^double max-force
+                     ^double dist])
 
 (defn ^Boid make-boid [loc ms mf]
   (Boid. loc
@@ -108,15 +143,6 @@
                  (+ (* (.nextDouble rnd) 2.0) -1.0))
          (Vec2d. 0.0 0.0)
          2.0 ms mf))
-
-(defn bound ^double [^double n ^double ox ^double dx]
-  (cond 
-   (< n (- ox)) (+ dx ox)
-   (> n (+ ox dx)) (- ox)
-   true n))
-
-(defn borders [{^Vec2d loc :loc, r :r, :as boid}]
-  (assoc boid :loc (Vec2d. (bound (.x loc) r width) (bound (.y loc) r height))))
 
 (defn make-flock
   ([] (make-flock boid-count))
@@ -136,15 +162,25 @@
 ;; =============================================================================
 
 (defn distance-map [{bloc :loc} boids]
-  (map (fn [{loc :loc :as other}]
-         (assoc other :dist (length (sub loc bloc)))) boids))
+  (map (fn [^Boid other]
+         (let [d (length (sub (.loc other) bloc))]
+           (DistBoid. (.loc other)
+                      (.vel other)
+                      (.acc other)
+                      (.r other)
+                      (.max-speed other)
+                      (.max-force other)
+                      d)))
+       boids))
 
 (defn distance-filter [boids ^double l ^double u]
-  (filter (fn [other] (let [d (:dist other)] (and (> d l) (< d u)))) boids))
+  (filter (fn [^DistBoid other] (let [d (.dist other)] (and (> d l) (< d u)))) boids))
 
 (defn separation-map [{loc :loc :as boid} boids]
-  (map (fn [{d :dist oloc :loc}]
-         (-> loc (sub oloc) unit (div d)))
+  (map (fn [^DistBoid other]
+         (let [d (.dist other)
+               oloc (.loc other)]
+          (-> loc (sub oloc) unit (div d))))
        boids))
 
 (defn separation
@@ -160,7 +196,7 @@
   [{mf :max-force :as boid} boids]
   (let [mf (double mf)
         nhood 50.0
-        filtered (map :vel (distance-filter boids 0.0 nhood))]
+        filtered (map #(.vel ^DistBoid %) (distance-filter boids 0.0 nhood))]
     (let [sum (reduce sum filtered)]
       (if (not (zero? sum))
         (limit (div sum (count filtered)) mf)
@@ -168,25 +204,11 @@
 
 (defn cohesion [boid boids]
   (let [nhood 50.0
-        filtered (map :loc (distance-filter boids 0.0 nhood))]
+        filtered (map #(.loc ^DistBoid %) (distance-filter boids 0.0 nhood))]
     (let [sum (reduce sum filtered)]
       (if (not (zero? sum))
        (steer boid (div sum (count filtered)) false)
        sum))))
-
-(defn flock [{acc :acc, :as boid} boids]
-  (let [mboids (distance-map boid boids)
-        sep (-> (separation boid mboids) (mul 2.0))
-        ali (-> (alignment boid mboids) (mul 1.0))
-        coh (-> (cohesion boid mboids) (mul 1.0))]
-    (assoc boid :acc (-> acc (add sep) (add ali) (add coh)))))
-
-(defn update [{vel :vel, acc :acc, loc :loc, ms :max-speed, :as boid}]
-  (let [ms (double ms)]
-   (assoc boid 
-     :vel (limit (add vel acc) ms)
-     :loc (add loc vel)
-     :acc (mul acc 0.0))))
 
 (defn boid-run [boid boids]
   (-> (flock boid boids) update borders))
